@@ -26,9 +26,9 @@ data SenseDir = Here
 adjacentCell :: Pos -> Dir -> Pos
 adjacentCell (Pos x y) East      = Pos (x+1) y
 adjacentCell (Pos x y) SouthEast = Pos (if even y then x   else x+1) (y+1)
-adjacentCell (Pos x y) SouthWest = Pos (if even y then x-1 else x) (y+1)
+adjacentCell (Pos x y) SouthWest = Pos (if even y then x-1 else x)   (y+1)
 adjacentCell (Pos x y) West      = Pos (x-1) y
-adjacentCell (Pos x y) NorthWest = Pos (if even y then x-1 else x) (y-1)
+adjacentCell (Pos x y) NorthWest = Pos (if even y then x-1 else x)   (y-1)
 adjacentCell (Pos x y) NorthEast = Pos (if even y then x   else x+1) (y-1)
 
 turn :: Turn -> Dir -> Dir

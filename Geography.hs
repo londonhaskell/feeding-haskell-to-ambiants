@@ -26,11 +26,11 @@ data Markers = Markers (Color, Color)
              deriving (Show, Eq, Read)
 
 data Cell = Rocky
-          | Cell {
-                   ant :: Maybe Ant
-                 , foodParticles :: Particles
-                 , markers :: Markers
-                 }
+          | Clear {
+                    ant :: Maybe Ant
+                  , foodParticles :: Particles
+                  , markers :: Markers
+                  }
           deriving (Show, Eq, Read)
 
 type Cells = M.Map Pos Cell
@@ -40,30 +40,30 @@ data World = World Cells Ants
 
 rocky :: World -> Pos -> Bool
 rocky (World c a) p = case c M.! p of
-                      Rocky -> True
-                      _     -> False
+                        Rocky -> True
+                        _     -> False
 
 someAntIsAt :: World -> Pos -> Bool
 someAntIsAt (World c a) p = case c M.! p of
-                              Cell (Just x) _ _ -> True
-                              _                 -> False
+                              Clear (Just x) _ _ -> True
+                              _                  -> False
 
 -- Can only be called if someAntIsAt returns true
 antAt :: World -> Pos -> Ant
 antAt (World c a) p = case c M.! p of
-                        Cell (Just x) _ _ -> x
-                        _                 -> error("antAt called when no ant present: " ++ show p)
+                        Clear (Just x) _ _ -> x
+                        _                  -> error("antAt called when no ant present: " ++ show p)
 
 setAntAt :: World -> Pos -> Ant -> World
-setAntAt (World c a) p x = let adjustCell (Cell _ f m) = Cell (Just x) f m
+setAntAt (World c a) p x = let adjustCell (Clear _ f m) = Clear (Just x) f m
                            in  World (M.adjust adjustCell p      c)
                                      (M.adjust (const x)  (id x) a)
 
 clearAntAt :: World -> Pos -> World
 clearAntAt (World c a) p = case c M.! p of
-                             Cell (Just x) f m -> World (M.insert p (Cell Nothing f m) c)
-                                                        (M.delete (id x) a)
-                             _          -> error("Can't clear an ant on a Rock: " ++ show p)
+                             Clear (Just x) f m -> World (M.insert p (Clear Nothing f m) c)
+                                                         (M.delete (id x) a)
+                             _                  -> error("Can't clear an ant on a Rock: " ++ show p)
 
 antIsAlive :: World -> Int -> Bool
 antIsAlive (World c a) i = M.member i a
@@ -79,5 +79,5 @@ killAntAt = clearAntAt
 
 foodAt :: World -> Pos -> Int
 foodAt (World c a) p = case c M.! p of
-                         Cell _ (Particles i) _ -> i
-                         _                      -> error("There are no food particles on a Rock: " ++ show p)
+                         Clear _ (Particles i) _ -> i
+                         _                       -> error("There are no food particles on a Rock: " ++ show p)
