@@ -1,5 +1,3 @@
-{-# LANGUAGE ViewPatterns #-}
-
 module Geography
     (
       Particles(..)
