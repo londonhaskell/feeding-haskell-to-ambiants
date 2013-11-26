@@ -2,7 +2,7 @@ module Biology
     (
       Color
     , State
-    , Ant
+    , Ant(..)
     , mkState
     , otherColor
     ) where

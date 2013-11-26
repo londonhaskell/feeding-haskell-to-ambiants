@@ -3,7 +3,7 @@ module Geometry where
 import Prelude hiding (Left, Right)
 
 data Pos = Pos Int Int
-         deriving (Show, Eq, Read)
+         deriving (Ord, Show, Eq, Read)
 
 data Dir = East
          | SouthEast
