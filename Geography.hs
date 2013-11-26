@@ -44,7 +44,7 @@ antAt (World c a) p = case c M.! p of
 
 setAntAt :: World -> Pos -> Ant -> World
 setAntAt (World c a) p x = World (M.adjust (\(Cell _ f m) -> Cell (Just x) f m) p c)
-                                 (M.adjust (\y -> x) (id x) a)
+                                 (M.adjust (const x) (id x) a)
 
 clearAntAt :: World -> Pos -> World
 clearAntAt (World c a) p = case c M.! p of
