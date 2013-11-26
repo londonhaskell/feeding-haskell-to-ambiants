@@ -1,6 +1,20 @@
 {-# LANGUAGE ViewPatterns #-}
 
-module Geography where
+module Geography
+    (
+      Particles(..)
+    , Markers(..)
+    , Cell(..)
+    , rocky
+    , someAntIsAt
+    , antAt
+    , setAntAt
+    , clearAntAt
+    , antIsAlive
+    , findAnt
+    , killAntAt
+    , foodAt
+    ) where
 
 import           Prelude  hiding (id)
 import qualified Data.Map as M
@@ -43,12 +57,14 @@ antAt (World c a) p = case c M.! p of
                         _                 -> error("antAt called when no ant present: " ++ show p)
 
 setAntAt :: World -> Pos -> Ant -> World
-setAntAt (World c a) p x = World (M.adjust (\(Cell _ f m) -> Cell (Just x) f m) p c)
-                                 (M.adjust (const x) (id x) a)
+setAntAt (World c a) p x = let adjustCell (Cell _ f m) = Cell (Just x) f m
+                           in  World (M.adjust adjustCell p      c)
+                                     (M.adjust (const x)  (id x) a)
 
 clearAntAt :: World -> Pos -> World
 clearAntAt (World c a) p = case c M.! p of
-                             Cell (Just x) f m -> World (M.insert p (Cell Nothing f m) c) (M.delete (id x) a)
+                             Cell (Just x) f m -> World (M.insert p (Cell Nothing f m) c)
+                                                        (M.delete (id x) a)
                              _          -> error("Can't clear an ant on a Rock: " ++ show p)
 
 antIsAlive :: World -> Int -> Bool
@@ -65,5 +81,5 @@ killAntAt = clearAntAt
 
 foodAt :: World -> Pos -> Int
 foodAt (World c a) p = case c M.! p of
-                       Cell _ (Particles i) _ -> i
-                       _                      -> error("There are no food particles on a Rock: " ++ show p)
+                         Cell _ (Particles i) _ -> i
+                         _                      -> error("There are no food particles on a Rock: " ++ show p)
