@@ -32,7 +32,7 @@ checkMarker (Marker m) i
   | otherwise = error("Incorrect marker value: " ++ show i)
 
 checkAnyMarker :: Marker -> Bool
-checkAnyMarker (Marker m) = M.null m
+checkAnyMarker (Marker m) = not $ M.null m
 
 inRange :: Int -> Bool
 inRange i = i >= 0 && i <= 5
