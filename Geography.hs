@@ -20,6 +20,7 @@ import qualified Data.Map as M
 import           Geometry
 import           Biology
 import           Chemistry
+import           Phenomenology
 
 data Particles = Particles Int
                deriving (Show, Eq, Read)
@@ -33,10 +34,16 @@ data Cell = Rocky
                   }
           deriving (Show, Eq, Read)
 
-type Cells = M.Map Pos Cell
-type Ants  = M.Map Int Ant
+type Cells     = M.Map Pos Cell
+type Ants      = M.Map Int Ant
+type RedHill   = M.Map Pos Cell
+type Blackhill = M.Map Pos Cell
 
-data World = World Cells Ants
+data World = World {
+                     cells     :: Cells
+                   , ants      :: Ants
+                   }
+           deriving (Show, Eq, Read)
 
 rocky :: World -> Pos -> Bool
 rocky (World c a) p = case c M.! p of
@@ -110,3 +117,23 @@ checkAnyMarkerAt (World c _) p Red    = case c M.! p of
 checkAnyMarkerAt (World c _) p Black  = case c M.! p of
                                           Clear _ _ _ b -> checkAnyMarker b
                                           _             -> error("No markers at: " ++ show p)
+
+cellMatches :: World -> Pos -> Condition -> Color -> Bool
+cellMatches w p cond           _
+  | rocky w p                    = cond == Rock
+cellMatches _ _ Rock           _ = False
+cellMatches w p Friend         c = someAntIsAt w p &&
+                                   (color $ antAt w p) == c
+cellMatches w p Foe            c = someAntIsAt w p &&
+                                   (color $ antAt w p) /= c
+cellMatches w p FriendWithFood c = someAntIsAt w p &&
+                                   (color $ antAt w p) == c &&
+                                   (hasFood $ antAt w p)
+cellMatches w p FoeWithFood    c = someAntIsAt w p &&
+                                   (color $ antAt w p) /= c &&
+                                   (hasFood $ antAt w p)
+cellMatches w p (Marker i)     c = checkMarkerAt w p c i
+cellMatches w p FoeMarker      c = checkAnyMarkerAt w p $ otherColor c
+cellMatches w p Home           c = undefined --anthillAt w p c
+cellMatches w p FoeHome        c = undefined --anthillAt w p $ otherColor c
+cellMatches w p Food           _ = foodAt w p > 0
