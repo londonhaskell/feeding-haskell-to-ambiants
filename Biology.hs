@@ -1,6 +1,6 @@
 module Biology
     (
-      Color
+      Color(..)
     , State
     , Ant(..)
     , mkState
