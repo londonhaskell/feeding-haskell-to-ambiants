@@ -11,6 +11,7 @@ module Geography
     , findAnt
     , killAntAt
     , foodAt
+    , anthillAt
     , setMarkerAt
     , clearMarkerAt
     ) where
@@ -36,58 +37,67 @@ data Cell = Rocky
 
 type Cells     = M.Map Pos Cell
 type Ants      = M.Map Int Ant
-type RedHill   = M.Map Pos Cell
-type Blackhill = M.Map Pos Cell
+type RedHill   = M.Map Pos Bool
+type BlackHill = M.Map Pos Bool
 
 data World = World {
                      cells     :: Cells
                    , ants      :: Ants
+                   , redHill   :: RedHill
+                   , blackHill :: BlackHill
                    }
            deriving (Show, Eq, Read)
 
 rocky :: World -> Pos -> Bool
-rocky (World c a) p = case c M.! p of
-                        Rocky -> True
-                        _     -> False
+rocky w p = case (cells w) M.! p of
+              Rocky -> True
+              _     -> False
 
 someAntIsAt :: World -> Pos -> Bool
-someAntIsAt (World c a) p = case c M.! p of
-                              Clear (Just x) _ _ _ -> True
-                              _                    -> False
+someAntIsAt w p = case (cells w) M.! p of
+                    Clear (Just x) _ _ _ -> True
+                    _                    -> False
 
 -- Can only be called if someAntIsAt returns true
 antAt :: World -> Pos -> Ant
-antAt (World c a) p = case c M.! p of
-                        Clear (Just x) _ _ _ -> x
-                        _                    -> error("antAt called when no ant present: " ++ show p)
+antAt w p = case (cells w) M.! p of
+              Clear (Just x) _ _ _ -> x
+              _                    -> error("antAt called when no ant present: " ++ show p)
 
 setAntAt :: World -> Pos -> Ant -> World
-setAntAt (World c a) p x = let adjustCell (Clear _ f r b) = Clear (Just x) f r b
-                           in  World (M.adjust adjustCell p      c)
-                                     (M.adjust (const x)  (id x) a)
+setAntAt w p x = let adjustCell y = y { ant = Just x }
+                     c = M.adjust adjustCell p (cells w)
+                     a = M.adjust (const x) (id x) (ants w)
+                 in  w { cells = c, ants = a }
 
 clearAntAt :: World -> Pos -> World
-clearAntAt (World c a) p = case c M.! p of
-                             Clear (Just x) f r b -> World (M.insert p (Clear Nothing f r b) c)
-                                                           (M.delete (id x) a)
-                             _                    -> error("Can't clear an ant on a Rock: " ++ show p)
+clearAntAt w p = case (cells w) M.! p of
+                   c@(Clear (Just x) _ _ _) -> w { cells = M.insert p (c { ant = Nothing }) (cells w)
+                                                 , ants  = M.delete (id x) (ants w)
+                                                 }
+                   c@(Clear _        _ _ _) -> w { cells = M.insert p (c { ant = Nothing }) (cells w) }
+                   _                        -> error("Can't clear an ant on a Rock: " ++ show p)
 
 antIsAlive :: World -> Int -> Bool
-antIsAlive (World c a) i = M.member i a
+antIsAlive w i = M.member i $ ants w
 
 -- Can only be called if antIsAlive returns true
 findAnt :: World -> Int -> Ant
-findAnt (World c a) i = case M.lookup i a of
-                          Just x -> x
-                          _      -> error("findAnt called when ant not present (id): " ++ show i)
+findAnt w i = case M.lookup i (ants w) of
+                Just x -> x
+                _      -> error("findAnt called when ant not present (id): " ++ show i)
 
 killAntAt :: World -> Pos -> World
 killAntAt = clearAntAt
 
 foodAt :: World -> Pos -> Int
-foodAt (World c a) p = case c M.! p of
-                         Clear _ (Particles i) _ _ -> i
-                         _                         -> error("There are no food particles on a Rock: " ++ show p)
+foodAt w p = case (cells w) M.! p of
+               Clear _ (Particles i) _ _ -> i
+               _                         -> error("There are no food particles on a Rock: " ++ show p)
+
+anthillAt :: World -> Pos -> Color -> Bool
+anthillAt w p Red   = M.member p $ redHill   w
+anthillAt w p Black = M.member p $ blackHill w
 
 setMarkerAt :: World -> Pos -> Color -> Int -> World
 setMarkerAt = adjustMarkerAt setMarker
@@ -95,28 +105,30 @@ setMarkerAt = adjustMarkerAt setMarker
 clearMarkerAt :: World -> Pos -> Color -> Int -> World
 clearMarkerAt = adjustMarkerAt clearMarker
 
-adjustMarkerAt :: (Marker -> Int -> Marker) -> World -> Pos -> Color -> Int -> World
-adjustMarkerAt func (World c a) p color i = let adjustCell (Clear x f r b) = case color of
-                                                                               Red   -> Clear x f (func r i) b
-                                                                               Black -> Clear x f r (func b i)
-                                            in  World (M.adjust adjustCell p c)
-                                                      a
+adjustMarkerAt :: (Marker -> Int -> Marker)
+               -> World -> Pos -> Color -> Int -> World
+adjustMarkerAt func w p color i =
+    let adjustCell x = case color of
+                         Red   -> x { redMarkers   = func (redMarkers x)   i }
+                         Black -> x { blackMarkers = func (blackMarkers x) i }
+        c = M.adjust adjustCell p (cells w)
+    in  w { cells = c }
 
 checkMarkerAt :: World -> Pos -> Color -> Int -> Bool
-checkMarkerAt (World c _) p Red   i = case c M.! p of
-                                        Clear _ _ r _ -> checkMarker r i
-                                        _             -> error("No markers at: " ++ show p)
-checkMarkerAt (World c _) p Black i = case c M.! p of
-                                        Clear _ _ _ b -> checkMarker b i
-                                        _             -> error("No markers at: " ++ show p)
+checkMarkerAt w p Red   i = case (cells w) M.! p of
+                              Clear _ _ r _ -> checkMarker r i
+                              _             -> error("No markers at: " ++ show p)
+checkMarkerAt w p Black i = case (cells w) M.! p of
+                              Clear _ _ _ b -> checkMarker b i
+                              _             -> error("No markers at: " ++ show p)
 
 checkAnyMarkerAt :: World -> Pos -> Color -> Bool
-checkAnyMarkerAt (World c _) p Red    = case c M.! p of
-                                          Clear _ _ r _ -> checkAnyMarker r
-                                          _             -> error("No markers at: " ++ show p)
-checkAnyMarkerAt (World c _) p Black  = case c M.! p of
-                                          Clear _ _ _ b -> checkAnyMarker b
-                                          _             -> error("No markers at: " ++ show p)
+checkAnyMarkerAt w p Red    = case (cells w) M.! p of
+                                Clear _ _ r _ -> checkAnyMarker r
+                                _             -> error("No markers at: " ++ show p)
+checkAnyMarkerAt w p Black  = case (cells w) M.! p of
+                                Clear _ _ _ b -> checkAnyMarker b
+                                _             -> error("No markers at: " ++ show p)
 
 cellMatches :: World -> Pos -> Condition -> Color -> Bool
 cellMatches w p cond           _
@@ -134,6 +146,6 @@ cellMatches w p FoeWithFood    c = someAntIsAt w p &&
                                    (hasFood $ antAt w p)
 cellMatches w p (Marker i)     c = checkMarkerAt w p c i
 cellMatches w p FoeMarker      c = checkAnyMarkerAt w p $ otherColor c
-cellMatches w p Home           c = undefined --anthillAt w p c
-cellMatches w p FoeHome        c = undefined --anthillAt w p $ otherColor c
+cellMatches w p Home           c = anthillAt w p c
+cellMatches w p FoeHome        c = anthillAt w p $ otherColor c
 cellMatches w p Food           _ = foodAt w p > 0
