@@ -159,3 +159,14 @@ cellMatches w p FoeMarker      c = checkAnyMarkerAt w p $ otherColor c
 cellMatches w p Home           c = anthillAt w p c
 cellMatches w p FoeHome        c = anthillAt w p $ otherColor c
 cellMatches w p Food           _ = foodAt w p > 0
+
+
+adjacentAnts :: World -> Pos -> Color -> Int
+adjacentAnts w pos c =
+    let positions     = map (adjacentCell pos) [East .. NorthEast]
+        go acc []     = acc
+        go acc (p:ps) = if   (someAntIsAt w p) && color (antAt w p) == c
+                        then go (acc + 1) ps
+                        else go acc ps
+    in  go 0 positions
+
