@@ -2,6 +2,8 @@ module Geography
     (
       Particles(..)
     , Cell(..)
+    , World
+    , mkWorld
     , rocky
     , someAntIsAt
     , antAt
@@ -47,6 +49,14 @@ data World = World {
                    , blackHill :: BlackHill
                    }
            deriving (Show, Eq, Read)
+
+mkWorld :: World
+mkWorld  = World {
+                   cells     = M.empty
+                 , ants      = M.empty
+                 , redHill   = M.empty
+                 , blackHill = M.empty
+                 }
 
 rocky :: World -> Pos -> Bool
 rocky w p = case (cells w) M.! p of
