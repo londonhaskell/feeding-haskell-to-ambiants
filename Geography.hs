@@ -17,6 +17,7 @@ module Geography
     , anthillAt
     , setMarkerAt
     , clearMarkerAt
+    , cellMatches
     , checkForSurroundedAnts
     ) where
 
@@ -40,7 +41,7 @@ data Cell = Rocky
           deriving (Show, Eq, Read)
 
 type Cells     = M.Map Pos Cell
-type Ants      = M.Map Int Ant
+type Ants      = M.Map Int (Ant, Pos)
 type RedHill   = M.Map Pos Bool
 type BlackHill = M.Map Pos Bool
 
@@ -78,8 +79,9 @@ antAt w p = case (cells w) M.! p of
 
 setAntAt :: World -> Pos -> Ant -> World
 setAntAt w p x = let adjustCell y = y { ant = Just x }
+                     adjustAnt  _ = (x, p)
                      c = M.adjust adjustCell p (cells w)
-                     a = M.adjust (const x) (id x) (ants w)
+                     a = M.adjust adjustAnt (id x) (ants w)
                  in  w { cells = c, ants = a }
 
 clearAntAt :: World -> Pos -> World
@@ -94,10 +96,10 @@ antIsAlive :: World -> Int -> Bool
 antIsAlive w i = M.member i $ ants w
 
 -- Can only be called if antIsAlive returns true
-findAnt :: World -> Int -> Ant
+findAnt :: World -> Int -> Pos
 findAnt w i = case M.lookup i (ants w) of
-                Just x -> x
-                _      -> error("findAnt called when ant not present (id): " ++ show i)
+                Just (_, x) -> x
+                _           -> error("findAnt called when ant not present (id): " ++ show i)
 
 killAntAt :: World -> Pos -> World
 killAntAt = clearAntAt
