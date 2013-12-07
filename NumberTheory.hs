@@ -1,4 +1,4 @@
-module RandomInt where
+module NumberTheory where
 
 randomInt :: Int -> [Int]
 randomInt = drop 4

@@ -7,3 +7,4 @@ import Phenomenology
 import Geography
 import Cartography
 import Neurology
+import NumberTheory
