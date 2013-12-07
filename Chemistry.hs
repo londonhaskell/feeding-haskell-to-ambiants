@@ -2,6 +2,7 @@ module Chemistry
     (
       Marker
     , mkMarker
+    , marker
     ) where
 
 import qualified Data.Map as M
@@ -16,3 +17,6 @@ mkMarker i
 
 inRange :: Int -> Bool
 inRange i = i >= 0 && i <= 5
+
+marker :: Marker -> Int
+marker (Marker i) = i
