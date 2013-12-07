@@ -13,9 +13,11 @@ module Geography
     , findAnt
     , killAntAt
     , foodAt
+    , setFoodAt
     , anthillAt
     , setMarkerAt
     , clearMarkerAt
+    , checkForSurroundedAnts
     ) where
 
 import           Prelude  hiding (id)
@@ -105,6 +107,11 @@ foodAt w p = case (cells w) M.! p of
                Clear _ (Particles i) _ _ -> i
                _                         -> error("There are no food particles on a Rock: " ++ show p)
 
+setFoodAt :: World -> Pos -> Int -> World
+setFoodAt w p i = let adjustCell y = y { foodParticles = Particles i }
+                      c            = M.adjust adjustCell p (cells w)
+                  in  w { cells = c }
+
 anthillAt :: World -> Pos -> Color -> Bool
 anthillAt w p Red   = M.member p $ redHill   w
 anthillAt w p Black = M.member p $ blackHill w
@@ -170,3 +177,18 @@ adjacentAnts w pos c =
                         else go acc ps
     in  go 0 positions
 
+-- Tidy this up!
+checkForSurroundedAntAt :: World -> Pos -> World
+checkForSurroundedAntAt w p =
+    if   someAntIsAt w p
+    then let a = antAt w p
+         in  if adjacentAnts w p (otherColor (color a)) >= 5
+             then setFoodAt (killAntAt w p) p (foodAt w p + 3 + (if hasFood a then 1 else 0))
+             else w
+    else w
+
+checkForSurroundedAnts :: World -> Pos -> World
+checkForSurroundedAnts w p =
+    let w'    = checkForSurroundedAntAt w p
+        f d x = checkForSurroundedAntAt x $ adjacentCell p d
+    in  foldr f w' [East .. NorthEast]
