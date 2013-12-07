@@ -1,6 +1,6 @@
 module Neurology
     (
-      Instruction
+      Instruction(..)
     , getInstruction
     ) where
 

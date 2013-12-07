@@ -1,4 +1,12 @@
-module Geometry where
+module Geometry
+    (
+      Pos
+    , Dir(..)
+    , Turn
+    , SenseDir
+    , adjacentCell
+    , sensedCell
+    ) where
 
 import Prelude hiding (Left, Right)
 
