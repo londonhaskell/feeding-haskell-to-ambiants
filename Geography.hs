@@ -31,12 +31,14 @@ import           Phenomenology
 data Particles = Particles Int
                deriving (Show, Eq, Read)
 
+type MarkerMap = M.Map Marker Bool
+
 data Cell = Rocky
           | Clear {
                     ant           :: Maybe Ant
                   , foodParticles :: Particles
-                  , redMarkers    :: Marker
-                  , blackMarkers  :: Marker
+                  , redMarkers    :: MarkerMap
+                  , blackMarkers  :: MarkerMap
                   }
           deriving (Show, Eq, Read)
 
@@ -118,13 +120,19 @@ anthillAt :: World -> Pos -> Color -> Bool
 anthillAt w p Red   = M.member p $ redHill   w
 anthillAt w p Black = M.member p $ blackHill w
 
+setMarker :: MarkerMap -> Int -> MarkerMap
+setMarker m i = M.insert (mkMarker i) True m
+
 setMarkerAt :: World -> Pos -> Color -> Int -> World
 setMarkerAt = adjustMarkerAt setMarker
+
+clearMarker :: MarkerMap -> Int -> MarkerMap
+clearMarker m i = M.delete (mkMarker i) m
 
 clearMarkerAt :: World -> Pos -> Color -> Int -> World
 clearMarkerAt = adjustMarkerAt clearMarker
 
-adjustMarkerAt :: (Marker -> Int -> Marker)
+adjustMarkerAt :: (MarkerMap -> Int -> MarkerMap)
                -> World -> Pos -> Color -> Int -> World
 adjustMarkerAt func w p color i =
     let adjustCell x = case color of
@@ -133,6 +141,9 @@ adjustMarkerAt func w p color i =
         c = M.adjust adjustCell p (cells w)
     in  w { cells = c }
 
+checkMarker :: MarkerMap -> Int -> Bool
+checkMarker m i = M.member (mkMarker i) m
+
 checkMarkerAt :: World -> Pos -> Color -> Int -> Bool
 checkMarkerAt w p Red   i = case (cells w) M.! p of
                               Clear _ _ r _ -> checkMarker r i
@@ -140,6 +151,9 @@ checkMarkerAt w p Red   i = case (cells w) M.! p of
 checkMarkerAt w p Black i = case (cells w) M.! p of
                               Clear _ _ _ b -> checkMarker b i
                               _             -> error("No markers at: " ++ show p)
+
+checkAnyMarker :: MarkerMap -> Bool
+checkAnyMarker m = not $ M.null m
 
 checkAnyMarkerAt :: World -> Pos -> Color -> Bool
 checkAnyMarkerAt w p Red    = case (cells w) M.! p of
