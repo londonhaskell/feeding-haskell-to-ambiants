@@ -19,6 +19,7 @@ module Geography
     , clearMarkerAt
     , cellMatches
     , checkForSurroundedAnts
+    , randomInt
     ) where
 
 import           Prelude  hiding (id)
@@ -27,6 +28,7 @@ import           Geometry
 import           Biology
 import           Chemistry
 import           Phenomenology
+import qualified NumberTheory as N
 
 data Particles = Particles Int
                deriving (Show, Eq, Read)
@@ -52,15 +54,17 @@ data World = World {
                    , ants      :: Ants
                    , redHill   :: RedHill
                    , blackHill :: BlackHill
+                   , random    :: [Int]
                    }
            deriving (Show, Eq, Read)
 
-mkWorld :: World
-mkWorld  = World {
+mkWorld :: Int -> World
+mkWorld seed = World {
                    cells     = M.empty
                  , ants      = M.empty
                  , redHill   = M.empty
                  , blackHill = M.empty
+                 , random    = N.randomInt seed
                  }
 
 rocky :: World -> Pos -> Bool
@@ -208,3 +212,8 @@ checkForSurroundedAnts w p =
     let w'    = checkForSurroundedAntAt w p
         f d x = checkForSurroundedAntAt x $ adjacentCell p d
     in  foldr f w' [East .. NorthEast]
+
+randomInt :: World -> Int -> (Int, World)
+randomInt w n = let r  = head $ random w
+                    w' = w { random = tail (random w) }
+                in (r `mod` n, w')
