@@ -5,6 +5,7 @@ module Geometry
     , Turn
     , SenseDir
     , adjacentCell
+    , turn
     , sensedCell
     ) where
 
