@@ -2,7 +2,7 @@ module Geography
     (
       Particles(..)
     , Cell(..)
-    , World
+    , World(..)
     , mkWorld
     , rocky
     , someAntIsAt

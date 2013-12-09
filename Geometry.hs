@@ -1,6 +1,6 @@
 module Geometry
     (
-      Pos
+      Pos(..)
     , Dir(..)
     , Turn
     , SenseDir
