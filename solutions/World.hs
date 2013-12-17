@@ -1,7 +1,7 @@
 module World where
 
 import Prelude hiding ( id )
-import Data.Map ( Map, (!), fromList, adjust, insert, member )
+import Data.Map ( Map, (!), fromList, adjust, insert, member, empty )
 
 type Pos = (Integer, Integer)
 
@@ -26,6 +26,14 @@ data Ant = Ant { id :: Integer
                }
     deriving (Show, Eq, Read)
 
+defaultAnt = Ant { id = 0
+                 , color = Red
+                 , state = 0
+                 , resting = 0
+                 , direction = East
+                 , has_food = False
+                 }
+
 set_state :: Ant -> Integer -> Ant
 set_state a i = a { state = i }
 
@@ -41,6 +49,21 @@ set_has_food a b = a { has_food = b }
 data World = World { cells :: Map Pos Cell
                    , antPositions :: Map Integer Pos
                    }
+   deriving (Show)
+
+mkWorld sizeX sizeY = World { cells = fromList defaultCellsList
+                            , antPositions = empty
+                            }
+    where defaultCellsList = [ ( (x,y), defaultCell ) | x <- [ 0 .. sizeX - 1]
+                                                      , y <- [ 0 .. sizeY - 1]
+                                                      ]
+
+-- createWorld :: Pos -> World
+-- createWorld (sizeX, sizeY) = World { cells = fromList posCellList
+                           -- , antPositions = empty
+                           -- }
+    -- where posCellList = [ ( (x,y), defaultCell )  | x <- [ 0 .. sizeX - 1]
+                                                  -- ,  ]
 
 adjustCellContents :: World -> (CellContents -> CellContents) -> Pos -> World
 adjustCellContents w f p = w { cells = adjust g p (cells w) }
@@ -55,17 +78,25 @@ type Marker = ( Bool, Bool, Bool, Bool, Bool, Bool )
 defaultMarker :: Marker
 defaultMarker = (False, False, False, False, False, False)
 
-data CellContents = CellContents { ant :: Maybe Ant
-                                 , food :: Integer
+data CellContents = CellContents { food :: Integer
                                  , redMarker :: Marker
                                  , blackMarker :: Marker
                                  }
     deriving (Show)
+
+defaultCellContents :: CellContents
+defaultCellContents = CellContents { food = 0
+                      , redMarker = defaultMarker
+                      , blackMarker = defaultMarker
+                      }
                   
 data Cell = Rocky
           | ClearCell CellContents
           | AntCell Ant CellContents
     deriving (Show)
+    
+defaultCell :: Cell
+defaultCell = ClearCell defaultCellContents
 
 rocky :: World -> Pos -> Bool
 rocky w p = f ((cells w) ! p)
@@ -109,7 +140,27 @@ set_food_at w p i = adjustCellContents w f p
 -- Define parser from String to World (section 2.4, p6)
 
 parseWorld :: String -> World
-parseWorld s = undefined
+parseWorld s = foldr (applyWorldLine sizeX) (mkWorld sizeX sizeY) boardPairs
+    where
+        worldLines = lines s
+        sizeX = (read (worldLines !! 0)) :: Integer
+        sizeY = (read (worldLines !! 1)) :: Integer
+        boardPairs = zip [0 .. sizeY] (drop 2 worldLines)
+
+applyWorldLine :: Integer -> (Integer, String) -> World -> World
+applyWorldLine sizeX (y, s) w = foldr (applyWorldChar y) w xWordPairs
+    where xWordPairs = zip [0 .. sizeX] (words s)
+
+applyWorldChar ::  Integer -> (Integer, String) -> World -> World
+applyWorldChar y (x, s) wld = app char wld
+    where
+        p = (x, y)
+        char = last s
+        app '#' w = w { cells = insert p Rocky (cells w) }
+        app '.' w = w -- Leave as default
+        app '+' w = set_ant_at w p (defaultAnt { color = Red })
+        app '-' w = set_ant_at w p (defaultAnt { color = Black })
+        app c w | '0' <= c && c <= '9' = set_food_at w p (read [c] :: Integer)
 
 -- Define printWorld function such that (parseWorld . printWorld) = id
 
