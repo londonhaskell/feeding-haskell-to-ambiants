@@ -3,10 +3,12 @@ module Biology
       Color(..)
     , State(..)
     , Ant(..)
+    , mkAnt
     , mkState
     , otherColor
     ) where
 
+import Prelude hiding (id)
 import Geometry
 
 data Color = Red
@@ -25,6 +27,15 @@ data Ant = Ant {
                , hasFood    :: Bool
                }
          deriving (Show, Eq, Read)
+
+mkAnt :: Int -> Color -> Ant
+mkAnt i c = Ant { id         = i
+                , color      = c
+                , state      = mkState 0
+                , resting    = 0
+                , currentDir = East
+                , hasFood    = False
+                }
 
 mkState :: Int -> State
 mkState i

@@ -46,6 +46,9 @@ data Cell = Rocky
                   }
           deriving (Show, Eq, Read)
 
+emptyClearCell :: Cell
+emptyClearCell = Clear Nothing (Particles 0) M.empty M.empty
+
 type Cells     = M.Map Pos Cell
 type Ants      = M.Map Int (Ant, Pos)
 type RedHill   = M.Map Pos Bool
@@ -118,9 +121,11 @@ foodAt w p = case (cells w) M.! p of
                _                         -> error("There are no food particles on a Rock: " ++ show p)
 
 setFoodAt :: World -> Pos -> Int -> World
-setFoodAt w p i = let adjustCell y = y { foodParticles = Particles i }
-                      c            = M.adjust adjustCell p (cells w)
-                  in  w { cells = c }
+setFoodAt w p i = let food      = Particles i
+                      newCell   = Clear Nothing food M.empty M.empty
+                      f new old = old { foodParticles = food }
+                      cs'       = M.insertWith f p newCell (cells w)
+                  in  w { cells = cs' }
 
 anthillAt :: World -> Pos -> Color -> Bool
 anthillAt w p Red   = M.member p $ redHill   w
@@ -220,6 +225,10 @@ randomInt w n = let r  = head $ random w
                     w' = w { random = tail (random w) }
                 in (r `mod` n, w')
 
+setCell :: World -> Pos -> Cell -> World
+setCell w p c = let c' = M.insert p c (cells w)
+                in  w { cells = c' }
+
 parse :: World -> String -> World
 parse w s =
     foldr f w ps
@@ -228,16 +237,13 @@ parse w s =
     sizeX = (read (worldLines !! 0)) :: Int
     sizeY = (read (worldLines !! 1)) :: Int
     cellChars = concat $ drop 2 worldLines
-    ps = zip [(x,y) | y <- [0 .. sizeY-1], x <- [0 .. sizeX-1]] cellChars
-    f :: ((Int,Int), Char) -> World -> World
-    f ((x,y), '#') w = let c = M.insert (Pos x y) Rocky (cells w)
-                       in  w { cells = c }
-    f ((x,y), '.') w = let c = M.insert (Pos x y) (Clear Nothing (Particles 0) M.empty M.empty) (cells w)
-                       in  w { cells = c }
-    f ((x,y), '+') w = let c = M.insert (Pos x y) (Clear Nothing (Particles 0) M.empty M.empty) (cells w)
-                       in  w { cells = c }
-    f ((x,y), '-') w = let c = M.insert (Pos x y) (Clear Nothing (Particles 0) M.empty M.empty) (cells w)
-                       in  w { cells = c }
-    f ((x,y), n)   w
-        | '0' <= n && n <= '9' = let c = M.insert (Pos x y) (Clear Nothing (Particles $ C.digitToInt n) M.empty M.empty) (cells w)
-                                 in  w { cells = c }
+    ps = zip [ Pos x y | y <- [0 .. sizeY-1], x <- [0 .. sizeX-1]] cellChars
+    f :: (Pos, Char) -> World -> World
+    f (p, '#') w = setCell w p Rocky
+    f (p, '.') w = setCell w p emptyClearCell
+    f (p, '+') w = let c = M.insert p (emptyClearCell { ant = Just $ mkAnt 0 Red }) (cells w)
+                   in  w { cells = c }
+    f (p, '-') w = let c = M.insert p emptyClearCell (cells w)
+                   in  w { cells = c }
+    f (p, n)   w
+        | '0' <= n && n <= '9' = setFoodAt w p (C.digitToInt n)
