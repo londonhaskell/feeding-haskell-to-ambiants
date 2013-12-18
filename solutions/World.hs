@@ -1,7 +1,7 @@
 module World where
 
 import Prelude hiding ( id )
-import Data.Map ( Map, (!), fromList, adjust, insert, member, empty )
+import Data.Map ( Map, (!), fromList, adjust, insert, member, empty, keys )
 
 type Pos = (Integer, Integer)
 
@@ -140,32 +140,52 @@ set_food_at w p i = adjustCellContents w f p
 -- Define parser from String to World (section 2.4, p6)
 
 parseWorld :: String -> World
-parseWorld s = foldr (applyWorldLine sizeX) (mkWorld sizeX sizeY) boardPairs
+parseWorld s = foldr applyToWorld (mkWorld sizeX sizeY) ps
     where
-        worldLines = lines s
-        sizeX = (read (worldLines !! 0)) :: Integer
-        sizeY = (read (worldLines !! 1)) :: Integer
-        boardPairs = zip [0 .. sizeY] (drop 2 worldLines)
+        (one:two:rest) = words s
+        sizeX = (read one) :: Integer
+        sizeY = (read two) :: Integer
+        -- Get the positions (ps) by row and then by column
+        ps = zip [ (x, y) | y <- [0 .. sizeY - 1], x <- [0 .. sizeX - 1] ] rest
+        applyToWorld :: (Pos, String) -> World -> World
+        applyToWorld (p, "#") w = w { cells = insert p Rocky (cells w) }
+        applyToWorld (p, ".") w = w -- Leave as default (ClearCell)
+        applyToWorld (p, "+") w = set_ant_at w p (defaultAnt { color = Red })
+        applyToWorld (p, "-") w = set_ant_at w p (defaultAnt { color = Black })
+        f (p, c)   w = set_food_at w p (read c :: Integer)
 
-applyWorldLine :: Integer -> (Integer, String) -> World -> World
-applyWorldLine sizeX (y, s) w = foldr (applyWorldChar y) w xWordPairs
-    where xWordPairs = zip [0 .. sizeX] (words s)
-
-applyWorldChar ::  Integer -> (Integer, String) -> World -> World
-applyWorldChar y (x, s) wld = app char wld
-    where
-        p = (x, y)
-        char = last s
-        app '#' w = w { cells = insert p Rocky (cells w) }
-        app '.' w = w -- Leave as default
-        app '+' w = set_ant_at w p (defaultAnt { color = Red })
-        app '-' w = set_ant_at w p (defaultAnt { color = Black })
-        app c w | '0' <= c && c <= '9' = set_food_at w p (read [c] :: Integer)
-
--- Define printWorld function such that (parseWorld . printWorld) = id
+-- Define printWorld function such that (printWorld . parseWorld) = id
 
 printWorld :: World -> String
-printWorld w = undefined
+printWorld w = unlines (show sizeX : show sizeY : boardLines)
+    where
+        sizeX = worldSizeX w
+        sizeY = worldSizeY w
+        -- For ps (the positions) we want the coordinates by row 
+        -- then column, row 0, col 0, col 1, col 2 ... row 1, col 0 ...
+        -- As this is a list of lists comprehension, the order of the 
+        -- generators is the other way round to a noral list comprehension
+        -- that would be in the same co-ordinate order
+        ps = [ [ (x, y) | x <- [0 .. sizeX - 1] ] | y <- [0 .. sizeY - 1] ]
+        boardCells :: [[(Pos, Cell)]] -- Sub lists are rows
+        boardCells = map (map (\p -> (p, (cells w) ! p))) ps -- Keep list of lists
+        boardLines :: [String] -- Each string is a row
+        boardLines = map (concatMap convertAndPrefix) boardCells
+        convertAndPrefix :: (Pos, Cell) -> String -- Add the correct spaces
+        convertAndPrefix ((x, y), c) = (if x /= 0 || odd y then " " else "")
+                                            ++ convertCell c
+        convertCell :: Cell -> String -- Convert the Cells to 1 character strings
+        convertCell Rocky         = "#"
+        convertCell (ClearCell c) = if food c == 0 then "." else show (food c)
+        convertCell (AntCell a _) = if color a == Red then "+" else "-"
+
+worldSizeX w = (maximum (map fst ps)) + 1
+    where
+        ps = keys (cells w)
+
+worldSizeY w = (maximum (map snd ps)) + 1
+    where
+        ps = keys (cells w)
 
 -- Futher exercise:
 -- Many of the functions have the form World -> Something -> World
