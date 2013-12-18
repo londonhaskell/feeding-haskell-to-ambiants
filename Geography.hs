@@ -229,21 +229,33 @@ setCell :: World -> Pos -> Cell -> World
 setCell w p c = let c' = M.insert p c (cells w)
                 in  w { cells = c' }
 
+setRedHillAt :: World -> Pos -> RedHill
+setRedHillAt w p = M.insert p True (redHill w)
+
+setBlackHillAt :: World -> Pos -> BlackHill
+setBlackHillAt w p = M.insert p True (blackHill w)
+
+
 parse :: World -> String -> World
-parse w s =
-    foldr f w ps
+parse w s = result
   where
-    worldLines = words s
-    sizeX = (read (worldLines !! 0)) :: Int
-    sizeY = (read (worldLines !! 1)) :: Int
-    cellChars = concat $ drop 2 worldLines
-    ps = zip [ Pos x y | y <- [0 .. sizeY-1], x <- [0 .. sizeX-1]] cellChars
-    f :: (Pos, Char) -> World -> World
-    f (p, '#') w = setCell w p Rocky
-    f (p, '.') w = setCell w p emptyClearCell
-    f (p, '+') w = let c = M.insert p (emptyClearCell { ant = Just $ mkAnt 0 Red }) (cells w)
-                   in  w { cells = c }
-    f (p, '-') w = let c = M.insert p emptyClearCell (cells w)
-                   in  w { cells = c }
-    f (p, n)   w
-        | '0' <= n && n <= '9' = setFoodAt w p (C.digitToInt n)
+    (_,_,result) = foldr f (0,0,w) ps
+    worldLines   = words s
+    sizeX        = (read $ worldLines !! 0) :: Int
+    sizeY        = (read $ worldLines !! 1) :: Int
+    cellChars    = concat $ drop 2 worldLines
+    ps           = zip [ Pos x y | y <- [0 .. sizeY-1], x <- [0 .. sizeX-1]]
+                       cellChars
+    f :: (Pos, Char) -> (Int, Int, World) -> (Int, Int, World) -- (redAnt id, blackAnt id, world)
+    f (p, '#') (r,b,w) = (r,b,setCell w p Rocky)
+    f (p, '.') (r,b,w) = (r,b,setCell w p emptyClearCell)
+    f (p, '+') (r,b,w) = let a  = mkAnt r Red
+                             w' = setAntAt w p a
+                             rh = setRedHillAt w p
+                         in  (r+1,b,w' { redHill = rh })
+    f (p, '-') (r,b,w) = let a  = mkAnt b Black
+                             w' = setAntAt w p a
+                             bh = setBlackHillAt w p
+                         in  (r,b+1,w' { blackHill = bh })
+    f (p, n)   (r,b,w)
+        | '0' <= n && n <= '9' = (r,b,setFoodAt w p (C.digitToInt n))
