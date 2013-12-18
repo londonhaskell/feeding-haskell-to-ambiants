@@ -20,10 +20,12 @@ module Geography
     , cellMatches
     , checkForSurroundedAnts
     , randomInt
+    , parse
     ) where
 
 import           Prelude  hiding (id)
 import qualified Data.Map as M
+import qualified Data.Char as C
 import           Geometry
 import           Biology
 import           Chemistry
@@ -217,3 +219,25 @@ randomInt :: World -> Int -> (Int, World)
 randomInt w n = let r  = head $ random w
                     w' = w { random = tail (random w) }
                 in (r `mod` n, w')
+
+parse :: World -> String -> World
+parse w s =
+    foldr f w ps
+  where
+    worldLines = words s
+    sizeX = (read (worldLines !! 0)) :: Int
+    sizeY = (read (worldLines !! 1)) :: Int
+    cellChars = concat $ drop 2 worldLines
+    ps = zip [(x,y) | y <- [0 .. sizeY-1], x <- [0 .. sizeX-1]] cellChars
+    f :: ((Int,Int), Char) -> World -> World
+    f ((x,y), '#') w = let c = M.insert (Pos x y) Rocky (cells w)
+                       in  w { cells = c }
+    f ((x,y), '.') w = let c = M.insert (Pos x y) (Clear Nothing (Particles 0) M.empty M.empty) (cells w)
+                       in  w { cells = c }
+    f ((x,y), '+') w = let c = M.insert (Pos x y) (Clear Nothing (Particles 0) M.empty M.empty) (cells w)
+                       in  w { cells = c }
+    f ((x,y), '-') w = let c = M.insert (Pos x y) (Clear Nothing (Particles 0) M.empty M.empty) (cells w)
+                       in  w { cells = c }
+    f ((x,y), n)   w
+        | '0' <= n && n <= '9' = let c = M.insert (Pos x y) (Clear Nothing (Particles $ C.digitToInt n) M.empty M.empty) (cells w)
+                                 in  w { cells = c }

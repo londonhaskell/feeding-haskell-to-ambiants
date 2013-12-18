@@ -9,3 +9,4 @@ import Cartography
 import Neurology
 import NumberTheory
 import Kinetics
+import Visualize
