@@ -89,11 +89,11 @@ antAt w p = case (cells w) M.! p of
               _                    -> error("antAt called when no ant present: " ++ show p)
 
 setAntAt :: World -> Pos -> Ant -> World
-setAntAt w p x = let adjustCell y = y { ant = Just x }
-                     adjustAnt  _ = (x, p)
-                     c = M.adjust adjustCell p (cells w)
-                     a = M.adjust adjustAnt (id x) (ants w)
-                 in  w { cells = c, ants = a }
+setAntAt w p a = let alterCell new old = old { ant = Just a }
+                     alterAnt  new old = (a, p)
+                     cs = M.insertWith alterCell p (emptyClearCell { ant = Just a }) (cells w)
+                     as = M.insertWith alterAnt  (id a) (a, p) (ants w)
+                 in  w { cells = cs, ants = as }
 
 clearAntAt :: World -> Pos -> World
 clearAntAt w p = case (cells w) M.! p of
@@ -145,10 +145,10 @@ clearMarkerAt = adjustMarkerAt clearMarker
 
 adjustMarkerAt :: (MarkerMap -> Int -> MarkerMap)
                -> World -> Pos -> Color -> Int -> World
-adjustMarkerAt func w p color i =
+adjustMarkerAt f w p color i =
     let adjustCell x = case color of
-                         Red   -> x { redMarkers   = func (redMarkers x)   i }
-                         Black -> x { blackMarkers = func (blackMarkers x) i }
+                         Red   -> x { redMarkers   = f (redMarkers x)   i }
+                         Black -> x { blackMarkers = f (blackMarkers x) i }
         c = M.adjust adjustCell p (cells w)
     in  w { cells = c }
 
