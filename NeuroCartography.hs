@@ -14,17 +14,19 @@ import           Neurology
 import           Phenomenology
 
 parseInstruction :: P.Parser Instruction
-parseInstruction = parseMark
+parseInstruction = parseMarkUnmark
 
-parseMark :: P.Parser Instruction
-parseMark = do
+parseMarkUnmark :: P.Parser Instruction
+parseMarkUnmark = do
     token <- P.many P.letter
     P.char ' '
     marker <- P.digit
     P.char ' '
     st <- P.many P.digit
     return $ case token of
-               "Mark" -> Mark (mkMarker $ C.digitToInt marker)
+               "Mark" ->   Mark (mkMarker $ C.digitToInt marker)
+                              (mkState (read st :: Int))
+               "Unmark" -> Unmark (mkMarker $ C.digitToInt marker)
                               (mkState (read st :: Int))
 
 readBrainState s = case P.parse parseInstruction "Brain State" s of
