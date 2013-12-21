@@ -20,6 +20,7 @@ parseInstruction = try (parseMark)     -- Move starts with 'M' so *try* Mark
                <|> parseDrop
                <|> parseTurn
                <|> parseMove
+               <|> parseFlip
 
 parseMark :: Parser Instruction
 parseMark = do
@@ -76,6 +77,19 @@ parseMove = do
     char ' '
     st2 <- many digit
     return $ Move (mkState (read st1 :: Int))
+                  (mkState (read st2 :: Int))
+
+parseFlip :: Parser Instruction
+parseFlip = do
+    string "Flip"
+    char ' '
+    n <- many digit
+    char ' '
+    st1 <- many digit
+    char ' '
+    st2 <- many digit
+    return $ Flip (read n :: Int)
+                  (mkState (read st1 :: Int))
                   (mkState (read st2 :: Int))
 
 readBrainState s = case parse parseInstruction "Brain State" s of
