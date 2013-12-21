@@ -14,11 +14,12 @@ import           Neurology
 import           Phenomenology
 
 parseInstruction :: Parser Instruction
-parseInstruction = parseMark
+parseInstruction = try (parseMark)     -- Move starts with 'M' so *try* Mark
                <|> parseUnmark
                <|> parsePickUp
                <|> parseDrop
                <|> parseTurn
+               <|> parseMove
 
 parseMark :: Parser Instruction
 parseMark = do
@@ -66,6 +67,16 @@ parseTurn = do
     st <- many digit
     return $ Turn (if turn !! 0 == 'L' then G.Left else G.Right)
                   (mkState (read st :: Int))
+
+parseMove :: Parser Instruction
+parseMove = do
+    string "Move"
+    char ' '
+    st1 <- many digit
+    char ' '
+    st2 <- many digit
+    return $ Move (mkState (read st1 :: Int))
+                  (mkState (read st2 :: Int))
 
 readBrainState s = case parse parseInstruction "Brain State" s of
                      Prelude.Left  err -> "ERROR parsing: " ++ show err
