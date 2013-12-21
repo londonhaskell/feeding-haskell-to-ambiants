@@ -2,8 +2,8 @@ module Geometry
     (
       Pos(..)
     , Dir(..)
-    , Turn
-    , SenseDir
+    , Turn(..)
+    , SenseDir(..)
     , adjacentCell
     , turn
     , sensedCell
