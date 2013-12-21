@@ -18,6 +18,7 @@ parseInstruction = parseMark
                <|> parseUnmark
                <|> parsePickUp
                <|> parseDrop
+               <|> parseTurn
 
 parseMark :: Parser Instruction
 parseMark = do
@@ -55,6 +56,16 @@ parseDrop = do
     char ' '
     st <- many digit
     return $ Drop (mkState (read st :: Int))
+
+parseTurn :: Parser Instruction
+parseTurn = do
+    string "Turn"
+    char ' '
+    turn <- string "Left" <|> string "Right"
+    char ' '
+    st <- many digit
+    return $ Turn (if turn !! 0 == 'L' then G.Left else G.Right)
+                  (mkState (read st :: Int))
 
 readBrainState s = case parse parseInstruction "Brain State" s of
                      Prelude.Left  err -> "ERROR parsing: " ++ show err
