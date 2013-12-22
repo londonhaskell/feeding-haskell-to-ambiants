@@ -20,6 +20,7 @@ module Geography
     , cellMatches
     , checkForSurroundedAnts
     , randomInt
+    , getInstruction
     , parse
     ) where
 
@@ -31,6 +32,7 @@ import           Biology
 import           Chemistry
 import           Phenomenology
 import qualified NumberTheory as N
+import           Neurology
 
 data Particles = Particles Int
                deriving (Show, Eq, Read)
@@ -49,26 +51,31 @@ data Cell = Rocky
 emptyClearCell :: Cell
 emptyClearCell = Clear Nothing (Particles 0) M.empty M.empty
 
-type Cells     = M.Map Pos Cell
-type Ants      = M.Map Int (Ant, Pos)
-type RedHill   = M.Map Pos Bool
-type BlackHill = M.Map Pos Bool
+type Cells        = M.Map Pos Cell
+type Ants         = M.Map Int (Ant, Pos)
+type RedHill      = M.Map Pos Bool
+type BlackHill    = M.Map Pos Bool
+type Instructions = M.Map Int Instruction
 
 data World = World {
                      cells     :: Cells
                    , ants      :: Ants
                    , redHill   :: RedHill
+                   , rIns      :: Instructions
                    , blackHill :: BlackHill
+                   , bIns      :: Instructions
                    , random    :: [Int]
                    }
            deriving (Show, Eq, Read)
 
-mkWorld :: Int -> World
-mkWorld seed = World {
+mkWorld :: [Instruction] -> [Instruction] -> Int -> World
+mkWorld r b seed = World {
                    cells     = M.empty
                  , ants      = M.empty
                  , redHill   = M.empty
+                 , rIns      = M.fromList $ zip [0..] r
                  , blackHill = M.empty
+                 , bIns      = M.fromList $ zip [0..] b
                  , random    = N.randomInt seed
                  }
 
@@ -235,6 +242,15 @@ setRedHillAt w p = M.insert p True (redHill w)
 setBlackHillAt :: World -> Pos -> BlackHill
 setBlackHillAt w p = M.insert p True (blackHill w)
 
+-- Keep the ant state machine in the world?
+getInstruction :: World -> Color -> State -> Instruction
+getInstruction w Red   (State s) = getIns w s rIns
+getInstruction w Black (State s) = getIns w s bIns
+
+getIns :: World -> Int -> (World -> Instructions) -> Instruction
+getIns w i f = case M.lookup i (f w) of
+                 Nothing -> error $ "Instruction doesn't exist" ++ show i
+                 Just x  -> x
 
 parse :: World -> String -> World
 parse w s = result
