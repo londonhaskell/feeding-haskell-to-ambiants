@@ -114,7 +114,7 @@ parseCondition = do
       "Marker" -> do
           char ' '
           i <- parseInt
-          return $ Marker i -- not yet the chemical marker, so not using smart constructor
+          return $ Marker (mkMarker i)
       x        -> return (read x :: Condition)
 
 parseSense :: Parser Instruction

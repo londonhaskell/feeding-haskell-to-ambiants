@@ -131,20 +131,20 @@ anthillAt :: World -> Pos -> Color -> Bool
 anthillAt w p Red   = M.member p $ redHill   w
 anthillAt w p Black = M.member p $ blackHill w
 
-setMarker :: MarkerMap -> Int -> MarkerMap
-setMarker m i = M.insert (mkMarker i) True m
+setMarker :: MarkerMap -> Marker -> MarkerMap
+setMarker m i = M.insert i True m
 
-setMarkerAt :: World -> Pos -> Color -> Int -> World
+setMarkerAt :: World -> Pos -> Color -> Marker -> World
 setMarkerAt = adjustMarkerAt setMarker
 
-clearMarker :: MarkerMap -> Int -> MarkerMap
-clearMarker m i = M.delete (mkMarker i) m
+clearMarker :: MarkerMap -> Marker -> MarkerMap
+clearMarker m i = M.delete i m
 
-clearMarkerAt :: World -> Pos -> Color -> Int -> World
+clearMarkerAt :: World -> Pos -> Color -> Marker -> World
 clearMarkerAt = adjustMarkerAt clearMarker
 
-adjustMarkerAt :: (MarkerMap -> Int -> MarkerMap)
-               -> World -> Pos -> Color -> Int -> World
+adjustMarkerAt :: (MarkerMap -> Marker -> MarkerMap)
+               -> World -> Pos -> Color -> Marker -> World
 adjustMarkerAt f w p color i =
     let adjustCell x = case color of
                          Red   -> x { redMarkers   = f (redMarkers x)   i }
@@ -152,10 +152,10 @@ adjustMarkerAt f w p color i =
         c = M.adjust adjustCell p (cells w)
     in  w { cells = c }
 
-checkMarker :: MarkerMap -> Int -> Bool
-checkMarker m i = M.member (mkMarker i) m
+checkMarker :: MarkerMap -> Marker -> Bool
+checkMarker m i = M.member i m
 
-checkMarkerAt :: World -> Pos -> Color -> Int -> Bool
+checkMarkerAt :: World -> Pos -> Color -> Marker -> Bool
 checkMarkerAt w p Red   i = case (cells w) M.! p of
                               Clear _ _ r _ -> checkMarker r i
                               _             -> error("No markers at: " ++ show p)
@@ -188,7 +188,7 @@ cellMatches w p FriendWithFood c = someAntIsAt w p &&
 cellMatches w p FoeWithFood    c = someAntIsAt w p &&
                                    (color $ antAt w p) /= c &&
                                    (hasFood $ antAt w p)
-cellMatches w p (Marker i)     c = checkMarkerAt w p c i
+cellMatches w p (Marker m)     c = checkMarkerAt w p c m
 cellMatches w p FoeMarker      c = checkAnyMarkerAt w p $ otherColor c
 cellMatches w p Home           c = anthillAt w p c
 cellMatches w p FoeHome        c = anthillAt w p $ otherColor c

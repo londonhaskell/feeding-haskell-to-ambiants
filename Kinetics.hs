@@ -23,9 +23,9 @@ go (Sense senseDir st1 st2 cond) w p a id = let p' = sensedCell p (currentDir a)
                                                      else st2
                                             in  setAntAt w p (a { state = st })
 
-go (Mark m s)                    w p a id = let w' = setMarkerAt w p (color a) (marker m)
+go (Mark m s)                    w p a id = let w' = setMarkerAt w p (color a) m
                                             in  setAntAt w' p (a { state = s })
-go (Unmark m s)                  w p a id = let w' = clearMarkerAt w p (color a) (marker m)
+go (Unmark m s)                  w p a id = let w' = clearMarkerAt w p (color a) m
                                             in  setAntAt w' p (a { state = s })
 
 go (PickUp st1 st2)              w p a id = if   hasFood a || foodAt w p == 0

@@ -1,12 +1,14 @@
 module Phenomenology where
 
+import Chemistry
+
 data Condition = Friend
                | Foe
                | FriendWithFood
                | FoeWithFood
                | Food
                | Rock
-               | Marker Int
+               | Marker Marker
                | FoeMarker
                | Home
                | FoeHome
