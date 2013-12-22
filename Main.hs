@@ -10,6 +10,8 @@ main = do
     s  <- readFile "world2.txt"
     rb <- readFile "redBrain.txt"
     bb <- readFile "blackBrain.txt"
-    let rIns = readBrainState $ lines rb
-        bIns = readBrainState $ lines bb
-    print $ render $ parse (mkWorld rIns bIns 12345) s
+    let rs = readBrainState $ lines rb
+        bs = readBrainState $ lines bb
+        w    = mkWorld rs bs 12345
+    print $ rIns w
+    print $ render $ parse w s

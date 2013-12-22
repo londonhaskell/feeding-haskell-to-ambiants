@@ -256,12 +256,12 @@ parse :: World -> String -> World
 parse w s = result
   where
     (_,_,result) = foldr f (0,0,w) ps
-    worldLines   = words s
-    sizeX        = (read $ worldLines !! 0) :: Int
-    sizeY        = (read $ worldLines !! 1) :: Int
-    cellChars    = concat $ drop 2 worldLines
-    ps           = zip [ Pos x y | y <- [0 .. sizeY-1], x <- [0 .. sizeX-1]]
-                       cellChars
+    (one:two:rest) = words s
+    sizeX          = read one :: Int
+    sizeY          = read two :: Int
+    cellChars      = concat rest
+    ps             = zip [ Pos x y | y <- [0 .. sizeY-1], x <- [0 .. sizeX-1]]
+                         cellChars
     f :: (Pos, Char) -> (Int, Int, World) -> (Int, Int, World) -- (redAnt id, blackAnt id, world)
     f (p, '#') (r,b,w) = (r,b,setCell w p Rocky)
     f (p, '.') (r,b,w) = (r,b,setCell w p emptyClearCell)
@@ -274,4 +274,4 @@ parse w s = result
                              bh = setBlackHillAt w p
                          in  (r,b+1,w' { blackHill = bh })
     f (p, n)   (r,b,w)
-        | '0' <= n && n <= '9' = (r,b,setFoodAt w p (C.digitToInt n))
+        | '1' <= n && n <= '9' = (r,b,setFoodAt w p (C.digitToInt n))
