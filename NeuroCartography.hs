@@ -140,6 +140,9 @@ parseMarker = do
     i <- parseInt
     return $ mkMarker i
 
-readBrainState s = case parse parseInstruction "Brain State" s of
-                     Prelude.Left  err -> "ERROR parsing: " ++ show err
-                     Prelude.Right val -> show val
+readBrainState :: [String] -> [Instruction]
+readBrainState [] = []
+readBrainState (s:ss) = (case parse parseInstruction "Brain State" s of
+                          Prelude.Left  err -> error (show err)
+                          Prelude.Right val -> val)
+                        : readBrainState ss
