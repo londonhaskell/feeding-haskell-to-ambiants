@@ -8,8 +8,8 @@ data Pos = ToDoPos  -- You might want to change this from a data declaration
 -- Dir type ...
 data Dir = ToDoDir
 
-
--- Create the Color data type and other_color function (line 2 and 4 of Section 2.2, p4)
+-- Create the Color data type and other_color function (line 2 and 4 of
+-- Section 2.2, p4)
 
 data Color = ToDoColour
 
@@ -33,7 +33,6 @@ set_direction = undefined
 set_has_food :: Ant -> Bool -> Ant
 set_has_food = undefined
 
-
 -- Define a Cell data structure that records all the 
 -- information for one cell and a World data structure 
 -- that holds all the cells in the game board (p5, section 
@@ -50,10 +49,21 @@ set_has_food = undefined
 
 data World = ToDoWorld
 
--- Write rocky function (line 3 of section 2.3, p5)
+data Cell = ToDoCell
+
+-- Default cell
+
+defaultCell :: Cell
+defaultCell = undefined
+
+-- Write rocky function (line 3 of section 2.3, p5) and a function
+-- to set a cell as rocky cell
 
 rocky :: World -> Pos -> Bool
 rocky = undefined
+
+set_rocky :: World -> Pos -> World
+set_rocky = undefined
 
 -- Define some_ant_is_at, ant_at and set_ant_at functions (line 14 onwards of 
 -- section 2.3, p5)
@@ -67,7 +77,6 @@ ant_at = undefined
 set_ant_at :: World -> Pos -> Ant -> World
 set_ant_at  = undefined
                                                              
-
 -- Define ant_is_alive and find_ant functions (line 25 onwards of section 2.3, p5)
 
 ant_is_alive :: World -> Integer -> Bool
@@ -76,7 +85,6 @@ ant_is_alive = undefined
 find_ant :: World -> Integer -> Pos
 find_ant = undefined
 
-
 -- Define food_at and set_food_at functions (lines 4 and 6 of p6, section 2.3)
 
 food_at :: World -> Pos -> Integer
@@ -84,6 +92,31 @@ food_at = undefined
 
 set_food_at :: World -> Pos -> Integer -> World
 set_food_at = undefined
+
+-- Define types for Marker and Markers (a group with 1 of each marker)
+
+data Marker = ToDoMarker
+
+data Markers = ToDoMarkers
+
+-- Define default group of markers
+
+defaultMarkers :: Markers
+defaultMarkers = undefined
+
+-- Define Marker functions
+
+set_marker_at :: World -> Pos -> Color -> Marker -> World
+set_marker_at = undefined
+
+clear_marker_at :: World -> Pos -> Color -> Marker -> World
+clear_marker_at = undefined
+
+check_marker_at :: World -> Pos -> Color -> Marker -> Bool
+check_marker_at = undefined
+
+check_any_marker_at :: World -> Pos -> Color -> Bool
+check_any_marker_at = undefined
 
 -- Define parser from String to World (section 2.4, p6)
 
