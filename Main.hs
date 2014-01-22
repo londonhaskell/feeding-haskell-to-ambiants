@@ -13,5 +13,4 @@ main = do
     let rs = readBrainState $ lines rb
         bs = readBrainState $ lines bb
         w    = mkWorld rs bs 12345
-    print $ rIns w
-    print $ render $ parse w s
+    putStrLn $ render $ parse w s

@@ -7,15 +7,21 @@ import qualified Data.Map as M
 import           Geography
 import           Geometry
 
-render :: World -> [(Int, Int, String)]
-render w = map go cs
+render :: World -> String
+render w = (show sizeX ++ "\n" ++ show sizeY) ++ (concat $ map go cs)
   where
+    sizeX = (1+) $ maximum $ map (xCoord . fst) cs
+    sizeY = (1+) $ maximum $ map (yCoord . fst) cs
+    xCoord (Pos x y) = x
+    yCoord (Pos x y) = y
     cs    = M.toList $ cells w
     red   = redHill w
     black = blackHill w
-    go (Pos x y,     Rocky)                     = (x, y, "# ")
-    go (p@(Pos x y), Clear _ (Particles 0) _ _) = (x, y, other p red black)
-    go (Pos x y,     Clear _ (Particles i) _ _) = (x, y, show i ++ " ")
+    go (Pos x 0, Rocky) | odd x       = "\n # "
+                        | otherwise   = "\n# "
+    go (_, Rocky)                     = "# "
+    go (p, Clear _ (Particles 0) _ _) = other p red black
+    go (_, Clear _ (Particles i) _ _) = show i ++ " "
 
 type Hill = M.Map Pos Bool
 

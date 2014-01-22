@@ -260,7 +260,7 @@ parse w s = result
     sizeX          = read one :: Int
     sizeY          = read two :: Int
     cellChars      = concat rest
-    ps             = zip [ Pos x y | y <- [0 .. sizeY-1], x <- [0 .. sizeX-1]]
+    ps             = zip [ Pos x y | x <- [0 .. sizeX-1], y <- [0 .. sizeY-1]]
                          cellChars
     f :: (Pos, Char) -> (Int, Int, World) -> (Int, Int, World) -- (redAnt id, blackAnt id, world)
     f (p, '#') (r,b,w) = (r,b,setCell w p Rocky)
