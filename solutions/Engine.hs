@@ -77,6 +77,7 @@ data Condition =
     deriving (Eq, Show)
 
 -- Define cell_matches function (section 2.6, page 7 and 8)
+
 cell_matches :: Pos -> Condition -> Color -> World -> Bool
 cell_matches p cond c w = 
     if rocky p w then
@@ -118,8 +119,10 @@ get_instruction c s w = instructions ! (c, s)
 
 -- Define helper functions that will allow easy translation of the 
 -- pseudo code for the step funciton.
--- set_state_pos - Update the state of the ant at the given position
--- set_has_food_pos - Update the food carried by the ant at the given position
+-- set_state_pos     - Set the state of the ant at the given position
+-- set_has_food_pos  - Set the food carried by the ant at the given position
+-- set_direction_pos - Set the direction of the ant at the given position
+-- set_resting_pos   - Set the resting count of the ant at the given position
     
 set_state_pos :: Pos -> State -> World -> World
 set_state_pos p st w = set_ant_at p (set_state (ant_at p w) st) w
@@ -137,7 +140,9 @@ set_resting_pos p i w = set_ant_at p (set_resting (ant_at p w) i) w
 -- a new world with the identified ant moved on one step (page 12)
 
 -- Reverse composition will allow the code to more closely match the task
--- pseudo code 
+-- pseudo code. If the function are World -> World then you can have:
+--     f1 >>>
+--     f2 $ w
 (>>>) :: (a -> b) -> (b -> c) -> (a -> c)
 f >>> g = g . f
 
@@ -156,38 +161,38 @@ step id w =
                         st = if cell_matches p' cond (color a) w then st1 else st2
                     in  set_state_pos p st $ w
                 Mark i st   ->
-                        set_marker_at p (color a) i
-                    >>> set_state_pos p st $ w
+                    set_marker_at p (color a) i >>>
+                    set_state_pos p st $ w
                 Unmark i st ->
-                        clear_marker_at p (color a) i
-                    >>> set_state_pos p st $ w
+                    clear_marker_at p (color a) i >>>
+                    set_state_pos p st $ w
                 PickUp st1 st2 ->
                     if has_food a || food_at p w == 0 then
                         set_state_pos p st2 $ w
                     else
-                         set_food_at p ((food_at p w) - 1)
-                     >>> set_has_food_pos p True
-                     >>> set_state_pos p st1 $ w
+                        set_food_at p ((food_at p w) - 1) >>>
+                        set_has_food_pos p True  >>>
+                        set_state_pos p st1 $ w
                 Drop st ->
                     if has_food a then
-                            set_food_at p ((food_at p w) + 1)
-                        >>> set_has_food_pos p False
-                        >>> set_state_pos p st $ w  -- TODO try and lift this out
+                        set_food_at p ((food_at p w) + 1) >>>
+                        set_has_food_pos p False >>>
+                        set_state_pos p st $ w  -- TODO try and lift this out
                     else
                         set_state_pos p st $ w
                 Turn lr st ->
-                        set_direction_pos p (turn lr (direction a))
-                    >>> set_state_pos p st $ w
+                    set_direction_pos p (turn lr (direction a)) >>> 
+                    set_state_pos p st $ w
                 Move st1 st2 ->
                     let newp = adjacent_cell p (direction a) in
                         if rocky newp w || some_ant_is_at newp w then
                             set_state_pos p st2 w
                         else 
-                                clear_ant_at p
-                            >>> set_ant_at newp a
-                            >>> set_state_pos p st1
-                            >>> set_resting_pos p 14
-                            >>> check_for_surrounded_ants newp $ w
+                            clear_ant_at p >>>
+                            set_ant_at newp a >>>
+                            set_state_pos p st1 >>>
+                            set_resting_pos p 14 >>>
+                            check_for_surrounded_ants newp $ w
                 Flip n st1 st2 ->
                     let st = if randomint(n) == 0 then st1 else st2 in
                     set_state_pos p st $ w
@@ -204,6 +209,7 @@ adjacent_ants = undefined
 check_for_surrounded_ant_at :: Pos -> World -> World
 check_for_surrounded_ant_at = undefined
 
+check_for_surrounded_ants :: Pos -> World -> World
 check_for_surrounded_ants = undefined
 
 -- Define randomint (page 11)

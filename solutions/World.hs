@@ -78,6 +78,7 @@ data World = World { cells :: Map Pos Cell
    deriving (Show)
 
 -- A blank World value of the given size that can be adjusted
+defaultWorld :: Integer -> Integer -> World
 defaultWorld sizeX sizeY = World { cells = fromList defaultCellsList
                                  , antPositions = empty
                                  }
@@ -91,7 +92,7 @@ data Cell = Rocky
           | AntCell Ant CellContents
     deriving (Show)
 
--- An empty cell    
+-- Default cell. An empty cell    
 defaultCell :: Cell
 defaultCell = ClearCell defaultCellContents
 
@@ -196,7 +197,7 @@ type Markers = Map (Color, Marker) Bool
     
 -- Define default group of markers
 
-defaultMarkers :: Map (Color, Marker) Bool
+defaultMarkers :: Markers
 defaultMarkers = fromList [ ((c, m), b) | c <- [ Red, Black]
                                         , m <- [ M0 .. M5 ]
                                         , b <- [ False ]
