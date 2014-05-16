@@ -1,21 +1,30 @@
 module World where
 
 import Prelude hiding ( id )
-import Data.Map ( Map, (!), fromList, adjust, insert, member, empty, keys )
+import Data.Map ( Map, (!), fromList, adjust, insert, member, empty, keys, elems, delete )
 
+-- Create the Pos and Dir data types (Section 2.1, p3 lines 2 and 5)
+
+-- Pos type
 type Pos = (Integer, Integer)
 
+-- Dir type
 data Dir = East | SouthEast | SouthWest
          | West | NorthWest | NorthEast
     deriving (Eq, Enum, Ord, Show, Read)
 
+-- Create the Color data type and other_color function (line 2 and 4 of
+-- Section 2.2, p4)
 
 data Color = Red | Black
-    deriving (Eq, Show, Read)
+    deriving (Eq, Show, Read, Ord)
 
 other_color :: Color -> Color
 other_color Red   = Black
 other_color Black = Red
+
+-- Create the Ant data type (line 8 of section 2.2, p4) and the 
+-- accessor and update functions (line 3 of p5, section 2.2)
 
 data Ant = Ant { id :: Integer
                , color :: Color
@@ -25,14 +34,6 @@ data Ant = Ant { id :: Integer
                , has_food :: Bool
                }
     deriving (Show, Eq, Read)
-
-defaultAnt = Ant { id = 0
-                 , color = Red
-                 , state = 0
-                 , resting = 0
-                 , direction = East
-                 , has_food = False
-                 }
 
 set_state :: Ant -> Integer -> Ant
 set_state a i = a { state = i }
@@ -46,113 +47,198 @@ set_direction a d = a { direction = d }
 set_has_food :: Ant -> Bool -> Ant
 set_has_food a b = a { has_food = b }
 
+-- Define a default ant that can be used / modified when creating the world
+defaultAnt :: Ant
+defaultAnt = Ant { id = 0
+                 , color = Red
+                 , state = 0
+                 , resting = 0
+                 , direction = East
+                 , has_food = False
+                 }
+
+-- Define a Cell data structure that records all the 
+-- information for one cell and a World data structure 
+-- that holds all the cells in the game board (p5, section 
+-- 2.3).
+--
+-- The details of the Marker data type are on p7 (second 
+-- line of section 2.5)
+--
+-- There are some design choices to make with both data
+-- type. Read the rest of the functions required to make
+-- sure it can easily support the functions needed.
+
+-- World, Cell, Marker type...
+
+-- World data type
 data World = World { cells :: Map Pos Cell
                    , antPositions :: Map Integer Pos
                    }
    deriving (Show)
 
-mkWorld sizeX sizeY = World { cells = fromList defaultCellsList
-                            , antPositions = empty
-                            }
+-- A blank World value of the given size that can be adjusted
+defaultWorld sizeX sizeY = World { cells = fromList defaultCellsList
+                                 , antPositions = empty
+                                 }
     where defaultCellsList = [ ( (x,y), defaultCell ) | x <- [ 0 .. sizeX - 1]
                                                       , y <- [ 0 .. sizeY - 1]
                                                       ]
 
--- createWorld :: Pos -> World
--- createWorld (sizeX, sizeY) = World { cells = fromList posCellList
-                           -- , antPositions = empty
-                           -- }
-    -- where posCellList = [ ( (x,y), defaultCell )  | x <- [ 0 .. sizeX - 1]
-                                                  -- ,  ]
+-- A Cell can be rocky, or potentially contain an ant or other contents
+data Cell = Rocky
+          | ClearCell CellContents
+          | AntCell Ant CellContents
+    deriving (Show)
 
-adjustCellContents :: World -> (CellContents -> CellContents) -> Pos -> World
-adjustCellContents w f p = w { cells = adjust g p (cells w) }
+-- An empty cell    
+defaultCell :: Cell
+defaultCell = ClearCell defaultCellContents
+
+-- The contents of the cells (other than the ants)
+data CellContents = CellContents { food :: Integer
+                                 , markers :: Markers
+                                 }
+    deriving (Show)
+
+-- Default CellContents value
+defaultCellContents :: CellContents
+defaultCellContents = CellContents { food = 0
+                                   , markers = defaultMarkers
+                                   }
+
+-- Helper function to get the CellContents from a World value
+getCellContents :: Pos -> World -> CellContents
+getCellContents p w = f ( (cells w) ! p )
+    where f :: Cell -> CellContents
+          f (ClearCell c) = c
+          f (AntCell a c) = c
+          f c = error ("getCellContents called on " ++ (show c)
+                                ++ " at " ++ (show p))
+
+-- Helper function to adjust the CellContents in a World value.
+-- Will fail if called on a rocky cell
+adjustCellContents :: (CellContents -> CellContents) -> Pos -> World -> World
+adjustCellContents f p w = w { cells = adjust g p (cells w) }
     where g :: Cell -> Cell
           g (ClearCell c) = ClearCell (f c)
           g (AntCell a c) = AntCell a (f c)
           g c = error ("adjustCellContents called on " ++ (show c)
                                 ++ " at " ++ (show p))
 
-type Marker = ( Bool, Bool, Bool, Bool, Bool, Bool )
+-- Write rocky function (line 3 of section 2.3, p5) and a function
+-- to set a cell as rocky cell
 
-defaultMarker :: Marker
-defaultMarker = (False, False, False, False, False, False)
-
-data CellContents = CellContents { food :: Integer
-                                 , redMarker :: Marker
-                                 , blackMarker :: Marker
-                                 }
-    deriving (Show)
-
-defaultCellContents :: CellContents
-defaultCellContents = CellContents { food = 0
-                      , redMarker = defaultMarker
-                      , blackMarker = defaultMarker
-                      }
-                  
-data Cell = Rocky
-          | ClearCell CellContents
-          | AntCell Ant CellContents
-    deriving (Show)
-    
-defaultCell :: Cell
-defaultCell = ClearCell defaultCellContents
-
-rocky :: World -> Pos -> Bool
-rocky w p = f ((cells w) ! p)
+rocky :: Pos -> World -> Bool
+rocky p w = f ((cells w) ! p)
     where f Rocky = True
           f _     = False
 
-some_ant_is_at :: World -> Pos -> Bool
-some_ant_is_at w p = f ((cells w) ! p)
+set_rocky :: Pos -> World -> World
+set_rocky p w = w { cells = insert p Rocky ( cells w ) }
+
+-- Define some_ant_is_at, ant_at, set_ant_at and clear_ant_at functions
+-- (line 14 onwards of section 2.3, p5)
+
+some_ant_is_at :: Pos -> World -> Bool
+some_ant_is_at p w = f ((cells w) ! p)
     where f (AntCell _ _) = True
           f  _            = False
 
-ant_at :: World -> Pos -> Ant
-ant_at w p = f ((cells w) ! p)
+ant_at :: Pos -> World -> Ant
+ant_at p w = f ((cells w) ! p)
     where f (AntCell a _) = a
           f c = error ("ant_at called on " ++ (show c) ++ " at " ++ (show p))
 
-set_ant_at :: World -> Pos -> Ant -> World
-set_ant_at w p a = w { cells = newCells, antPositions = newAntPositions }
+set_ant_at :: Pos -> Ant -> World -> World
+set_ant_at p a w = w { cells = newCells, antPositions = newAntPositions }
     where newCells        = ( adjust f p (cells w) )
           newAntPositions = ( insert (id a) p (antPositions w) )
           f (AntCell _ c) = AntCell a c
           f (ClearCell c) = AntCell a c
           f c = error ("set_ant_at called on " ++ (show c) ++ " at " ++ (show p))
 
-ant_is_alive :: World -> Integer -> Bool
-ant_is_alive w i = member i (antPositions w)
+clear_ant_at :: Pos -> World -> World
+clear_ant_at p w = w { cells = newCells, antPositions = newAntPositions }
+    where newCells        = ( adjust f p (cells w) )
+          newAntPositions = ( delete (id (ant_at p w)) (antPositions w) )
+          f (AntCell _ c) = ClearCell c
+          f c = error ("clear_ant_at called on " ++ (show c) ++ " at " ++ (show p))
+          
+-- Define ant_is_alive and find_ant functions (line 25 onwards of section 2.3, p5)
 
-find_ant :: World -> Integer -> Pos
-find_ant w i = (antPositions w) ! i
+ant_is_alive :: Integer -> World -> Bool
+ant_is_alive i w = member i (antPositions w)
 
-food_at :: World -> Pos -> Integer
-food_at w p = f ((cells w) ! p)
+find_ant :: Integer -> World -> Pos
+find_ant i w = (antPositions w) ! i
+
+-- Define food_at and set_food_at functions (lines 4 and 6 of p6, section 2.3)
+
+food_at :: Pos -> World -> Integer
+food_at p w = f ((cells w) ! p)
     where f (AntCell _ c) = food c
           f (ClearCell c) = food c
           f c = error ("food_at called on " ++ (show c) ++ " at " ++ (show p))
 
-set_food_at :: World -> Pos -> Integer -> World
-set_food_at w p i = adjustCellContents w f p
+set_food_at :: Pos -> Integer -> World -> World
+set_food_at p i w = adjustCellContents f p w
     where f c = c { food = i }
+
+-- Define types for Marker and Markers (a group with 1 of each marker)
+
+-- There are 6 types of marker, 0..5
+data Marker = M0 | M1 | M2 | M3 | M4 | M5
+    deriving (Show, Eq, Ord, Bounded, Enum)
+
+-- The markers for both colours will be stored together
+type Markers = Map (Color, Marker) Bool
+    
+-- Define default group of markers
+
+defaultMarkers :: Map (Color, Marker) Bool
+defaultMarkers = fromList [ ((c, m), b) | c <- [ Red, Black]
+                                        , m <- [ M0 .. M5 ]
+                                        , b <- [ False ]
+                                        ]
+
+-- Define Marker functions
+
+set_marker_at :: Pos -> Color -> Marker -> World -> World
+set_marker_at p c m w = adjustCellContents (f c m) p w
+    where f col m cc = cc { markers = insert (col, m) True (markers cc) }
+
+clear_marker_at :: Pos -> Color -> Marker -> World -> World
+clear_marker_at p c m w = adjustCellContents (f c m) p w
+    where f col m cc = cc {  markers = insert (col, m) False (markers cc) }
+
+check_marker_at :: Pos -> Color -> Marker -> World -> Bool
+check_marker_at p col m w = (markers (getCellContents p w)) ! (col, m)
+
+check_any_marker_at :: Pos -> Color -> World -> Bool
+check_any_marker_at p c w = any (\x -> x) (elems ( markers
+                                            (getCellContents p w)))
 
 -- Define parser from String to World (section 2.4, p6)
 
 parseWorld :: String -> World
-parseWorld s = foldr applyToWorld (mkWorld sizeX sizeY) ps
+parseWorld s = foldr applyToWorld (defaultWorld sizeX sizeY) pcs
     where
+         -- First 2 lines are the dimensions and then the rest of the characters
+         -- have white-space between them so can be treated as separate words
         (one:two:rest) = words s
         sizeX = (read one) :: Integer
         sizeY = (read two) :: Integer
         -- Get the positions (ps) by row and then by column
-        ps = zip [ (x, y) | y <- [0 .. sizeY - 1], x <- [0 .. sizeX - 1] ] rest
+        ps = [ (x, y) | y <- [0 .. sizeY - 1], x <- [0 .. sizeX - 1] ]
+        -- Build the positions and characters
+        pcs = zip ps rest
+        -- Take pairs of positions and characters and apply them to a World
         applyToWorld :: (Pos, String) -> World -> World
         applyToWorld (p, "#") w = w { cells = insert p Rocky (cells w) }
         applyToWorld (p, ".") w = w -- Leave as default (ClearCell)
-        applyToWorld (p, "+") w = set_ant_at w p (defaultAnt { color = Red })
-        applyToWorld (p, "-") w = set_ant_at w p (defaultAnt { color = Black })
-        f (p, c)   w = set_food_at w p (read c :: Integer)
+        applyToWorld (p, "+") w = set_ant_at p (defaultAnt { color = Red }) w
+        applyToWorld (p, "-") w = set_ant_at p (defaultAnt { color = Black }) w
 
 -- Define printWorld function such that (printWorld . parseWorld) = id
 
@@ -167,14 +253,19 @@ printWorld w = unlines (show sizeX : show sizeY : boardLines)
         -- generators is the other way round to a noral list comprehension
         -- that would be in the same co-ordinate order
         ps = [ [ (x, y) | x <- [0 .. sizeX - 1] ] | y <- [0 .. sizeY - 1] ]
+        -- Build a list of lists containing the position and cell
         boardCells :: [[(Pos, Cell)]] -- Sub lists are rows
         boardCells = map (map (\p -> (p, (cells w) ! p))) ps -- Keep list of lists
+        -- Build each the board line by line
         boardLines :: [String] -- Each string is a row
         boardLines = map (concatMap convertAndPrefix) boardCells
+        -- Convert each cell type to the correct character and add a space before
+        -- if needed
         convertAndPrefix :: (Pos, Cell) -> String -- Add the correct spaces
         convertAndPrefix ((x, y), c) = (if x /= 0 || odd y then " " else "")
                                             ++ convertCell c
-        convertCell :: Cell -> String -- Convert the Cells to 1 character strings
+         -- Convert the Cells to 1 character strings
+        convertCell :: Cell -> String
         convertCell Rocky         = "#"
         convertCell (ClearCell c) = if food c == 0 then "." else show (food c)
         convertCell (AntCell a _) = if color a == Red then "+" else "-"
@@ -187,7 +278,7 @@ worldSizeY w = (maximum (map snd ps)) + 1
     where
         ps = keys (cells w)
 
--- Futher exercise:
+-- Further exercise:
 -- Many of the functions have the form World -> Something -> World
 -- which would appears similar to the State Monad.
 -- Define a Monad instance to tidy up the code
