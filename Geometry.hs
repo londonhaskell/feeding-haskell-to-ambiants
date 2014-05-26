@@ -41,8 +41,8 @@ adjacentCell (Pos x y) NorthWest = Pos (if even y then x-1 else x)   (y-1)
 adjacentCell (Pos x y) NorthEast = Pos (if even y then x   else x+1) (y-1)
 
 turn :: Turn -> Dir -> Dir
-turn Left  d = toEnum $ (fromEnum d) + 5 `mod` 6
-turn Right d = toEnum $ (fromEnum d) + 1 `mod` 6
+turn Left  d = toEnum $ (fromEnum d + 5) `mod` 6
+turn Right d = toEnum $ (fromEnum d + 1) `mod` 6
 
 sensedCell :: Pos -> Dir -> SenseDir -> Pos
 sensedCell p d Here       = p
