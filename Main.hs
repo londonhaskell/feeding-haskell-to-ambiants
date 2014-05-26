@@ -24,6 +24,6 @@ main = do
 
 printInfo w = do
     putStrLn $ render w
-    putStrLn $ show . keys $ ants w
+    putStrLn $ show . length . keys $ ants w
 
 go w = unfoldr (\x -> Just (x, multistep x)) w
