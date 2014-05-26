@@ -45,12 +45,13 @@ go (PickUp st1 st2)              w p a id = if   hasFood a || foodAt w p == 0
                                                                       , hasFood = True
                                                                       })
 
-go (Drop st)                     w p a id = let w'   = setFoodAt w p $ foodAt w p + 1
-                                                w''  = setAntAt w' p (a { hasFood = False })
+go (Drop st)                     w p a id = let a'   = a { hasFood = False }
+                                                w'   = setFoodAt w p $ foodAt w p + 1
+                                                w''  = setAntAt w' p a'
                                                 w''' = if   hasFood a
-                                                       then w''
-                                                       else w
-                                            in  setAntAt w''' p (a { state = st})
+                                                       then setAntAt w'' p (a' { state = st })
+                                                       else setAntAt w   p (a  { state = st })
+                                            in  w'''
 
 go (Turn lr st)                  w p a id = setAntAt w p (a { currentDir = (turn lr $ currentDir a)
                                                             , state      = st
