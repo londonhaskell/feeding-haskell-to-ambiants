@@ -1,10 +1,20 @@
-module Kinetics where
+module Kinetics
+    (
+      multistep
+    ) where
+
+import Data.List
+import Data.Map (keys)
 
 import Biology
 import Chemistry
 import Geography
 import Geometry
 import Neurology
+
+multistep :: World -> World
+multistep w = let is = keys $ ants w
+              in  foldl' step w is
 
 step :: World -> Int -> World
 step w id =
