@@ -27,6 +27,7 @@ module Geography
 import           Prelude  hiding (id)
 import qualified Data.Map as M
 import qualified Data.Char as C
+import           Data.List (foldl')
 import           Geometry
 import           Biology
 import           Chemistry
@@ -129,7 +130,7 @@ foodAt w p = case (cells w) M.! p of
 
 setFoodAt :: World -> Pos -> Int -> World
 setFoodAt w p i = let food      = Particles i
-                      newCell   = Clear Nothing food M.empty M.empty
+                      newCell   = emptyClearCell { foodParticles = food }
                       f new old = old { foodParticles = food }
                       cs'       = M.insertWith f p newCell (cells w)
                   in  w { cells = cs' }
@@ -224,8 +225,8 @@ checkForSurroundedAntAt w p =
 checkForSurroundedAnts :: World -> Pos -> World
 checkForSurroundedAnts w p =
     let w'    = checkForSurroundedAntAt w p
-        f d x = checkForSurroundedAntAt x $ adjacentCell p d
-    in  foldr f w' [East .. NorthEast]
+        f x d = checkForSurroundedAntAt x $ adjacentCell p d
+    in  foldl' f w' [East .. NorthEast]
 
 randomInt :: World -> Int -> (Int, World)
 randomInt w n = let r  = head $ random w
