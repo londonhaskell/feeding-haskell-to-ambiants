@@ -6,6 +6,7 @@ module Visualize
 import qualified Data.Map as M
 import           Geography
 import           Geometry
+import           Biology
 
 render :: World -> String
 render w = (show sizeX ++ "\n" ++ show sizeY) ++ (concat $ map go cs)
@@ -20,6 +21,13 @@ render w = (show sizeX ++ "\n" ++ show sizeY) ++ (concat $ map go cs)
     go (Pos x 0, Rocky) | odd x       = "\n # "
                         | otherwise   = "\n# "
     go (_, Rocky)                     = "# "
+    go (p, Clear (Just a) (Particles i) _ _)      = if hasFood a
+                                                    then show (1 + i) ++ " "
+                                                    else if i > 0
+                                                         then show i ++ " "
+                                                         else case color a of
+                                                                Red   -> "R "
+                                                                Black -> "B "
     go (p, Clear _ (Particles 0) _ _) = other p red black
     go (_, Clear _ (Particles i) _ _) = show i ++ " "
 
