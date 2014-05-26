@@ -255,23 +255,23 @@ getIns w i f = case M.lookup i (f w) of
 parse :: World -> String -> World
 parse w s = result
   where
-    (_,_,result) = foldr f (0,0,w) ps
+    (_,result)   = foldr f (0,w) ps
     (one:two:rest) = words s
     sizeX          = read one :: Int
     sizeY          = read two :: Int
     cellChars      = concat rest
     ps             = zip [ Pos x y | x <- [0 .. sizeX-1], y <- [0 .. sizeY-1]]
                          cellChars
-    f :: (Pos, Char) -> (Int, Int, World) -> (Int, Int, World) -- (redAnt id, blackAnt id, world)
-    f (p, '#') (r,b,w) = (r,b,setCell w p Rocky)
-    f (p, '.') (r,b,w) = (r,b,setCell w p emptyClearCell)
-    f (p, '+') (r,b,w) = let a  = mkAnt r Red
-                             w' = setAntAt w p a
-                             rh = setRedHillAt w p
-                         in  (r+1,b,w' { redHill = rh })
-    f (p, '-') (r,b,w) = let a  = mkAnt b Black
-                             w' = setAntAt w p a
-                             bh = setBlackHillAt w p
-                         in  (r,b+1,w' { blackHill = bh })
-    f (p, n)   (r,b,w)
-        | '1' <= n && n <= '9' = (r,b,setFoodAt w p (C.digitToInt n))
+    f :: (Pos, Char) -> (Int, World) -> (Int, World) -- (ant id,world)
+    f (p, '#') (i,w) = (i,setCell w p Rocky)
+    f (p, '.') (i,w) = (i,setCell w p emptyClearCell)
+    f (p, '+') (i,w) = let a  = mkAnt i Red
+                           w' = setAntAt w p a
+                           rh = setRedHillAt w' p
+                       in  (i+1,w' { redHill = rh })
+    f (p, '-') (i,w) = let a  = mkAnt i Black
+                           w' = setAntAt w p a
+                           bh = setBlackHillAt w' p
+                       in  (i+1,w' { blackHill = bh })
+    f (p, n)   (i,w)
+        | '1' <= n && n <= '9' = (i,setFoodAt w p (C.digitToInt n))
