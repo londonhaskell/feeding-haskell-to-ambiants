@@ -20,7 +20,10 @@ main = do
         rs = readBrainState $ lines rb
         bs = readBrainState $ lines bb
         w  = parse (mkWorld rs bs 12345) s
-    mapM_ printInfo $ take i $ go w
+        aw = take i $ go w
+        lw = last aw
+    printInfo w
+    printInfo lw
 
 printInfo w = do
     putStrLn $ render w
