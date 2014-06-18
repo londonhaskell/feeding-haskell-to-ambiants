@@ -1,7 +1,8 @@
 module World where
 
 import Prelude hiding ( id )
-import Data.Map ( Map, (!), fromList, adjust, insert, member, empty, keys, elems, delete )
+import Data.Map ( Map, (!), fromList, toList, adjust, insert, member, 
+                  empty, keys, elems, delete )
 
 -- Create the Pos and Dir data types (Section 2.1, p3 lines 2 and 5)
 
@@ -74,6 +75,7 @@ defaultAnt = Ant { id = 0
 -- World data type
 data World = World { cells :: Map Pos Cell
                    , antPositions :: Map Integer Pos
+                   , hills :: Map Pos Color
                    }
    deriving (Show)
 
@@ -81,6 +83,7 @@ data World = World { cells :: Map Pos Cell
 defaultWorld :: Integer -> Integer -> World
 defaultWorld sizeX sizeY = World { cells = fromList defaultCellsList
                                  , antPositions = empty
+                                 , hills = empty
                                  }
     where defaultCellsList = [ ( (x,y), defaultCell ) | x <- [ 0 .. sizeX - 1]
                                                       , y <- [ 0 .. sizeY - 1]
@@ -151,8 +154,13 @@ ant_at p w = f ((cells w) ! p)
     where f (AntCell a _) = a
           f c = error ("ant_at called on " ++ (show c) ++ " at " ++ (show p))
 
+setAntAndHill :: Pos -> Ant -> World -> World
+setAntAndHill p a w = w' { hills = newHills }
+    where w'       = set_ant_at p a w
+          newHills = ( insert p (color a) (hills w') )
+
 set_ant_at :: Pos -> Ant -> World -> World
-set_ant_at p a w = w { cells = newCells, antPositions = newAntPositions }
+set_ant_at p a w = (w { cells = newCells, antPositions = newAntPositions } )
     where newCells        = ( adjust f p (cells w) )
           newAntPositions = ( insert (id a) p (antPositions w) )
           f (AntCell _ c) = AntCell a c
@@ -190,7 +198,7 @@ set_food_at p i w = adjustCellContents f p w
 
 -- There are 6 types of marker, 0..5
 data Marker = M0 | M1 | M2 | M3 | M4 | M5
-    deriving (Show, Eq, Ord, Bounded, Enum)
+    deriving (Read, Show, Eq, Ord, Bounded, Enum)
 
 -- The markers for both colours will be stored together
 type Markers = Map (Color, Marker) Bool
@@ -217,13 +225,15 @@ check_marker_at :: Pos -> Color -> Marker -> World -> Bool
 check_marker_at p col m w = (markers (getCellContents p w)) ! (col, m)
 
 check_any_marker_at :: Pos -> Color -> World -> Bool
-check_any_marker_at p c w = any (\x -> x) (elems ( markers
-                                            (getCellContents p w)))
+check_any_marker_at p c w = not . Prelude.null
+                                . filter (\((c', _), _) -> c' == c)  -- filter by colour
+                                . filter ( snd )  -- only the markers that are set
+                                . toList . markers $ getCellContents p w
 
 -- Define parser from String to World (section 2.4, p6)
 
 parseWorld :: String -> World
-parseWorld s = foldr applyToWorld (defaultWorld sizeX sizeY) pcs
+parseWorld s = snd $ foldl applyToWorld (0,(defaultWorld sizeX sizeY)) pcs
     where
          -- First 2 lines are the dimensions and then the rest of the characters
          -- have white-space between them so can be treated as separate words
@@ -235,11 +245,14 @@ parseWorld s = foldr applyToWorld (defaultWorld sizeX sizeY) pcs
         -- Build the positions and characters
         pcs = zip ps rest
         -- Take pairs of positions and characters and apply them to a World
-        applyToWorld :: (Pos, String) -> World -> World
-        applyToWorld (p, "#") w = w { cells = insert p Rocky (cells w) }
-        applyToWorld (p, ".") w = w -- Leave as default (ClearCell)
-        applyToWorld (p, "+") w = set_ant_at p (defaultAnt { color = Red }) w
-        applyToWorld (p, "-") w = set_ant_at p (defaultAnt { color = Black }) w
+        applyToWorld :: (Integer, World) -> (Pos, String) -> (Integer, World)
+        applyToWorld (i, w) (p, "#") = (i, w { cells = insert p Rocky (cells w) })
+        applyToWorld (i, w) (p, ".") = (i, w) -- Leave as default (ClearCell)
+        applyToWorld (i, w) (p, "+") = (i+1, setAntAndHill p (defaultAnt { color = Red, id = i }) w)
+        applyToWorld (i, w) (p, "-") = (i+1, setAntAndHill p (defaultAnt { color = Black, id = i }) w)
+        applyToWorld (i, w) (p, n) | "0" <= n && n <= "9"  
+                                     = (i, set_food_at p (read n :: Integer) w)
+        applyToWorld (i, w) (p, s)   = error ("Cannot parse " ++ s ++ " at " ++ show p)
 
 -- Define printWorld function such that (printWorld . parseWorld) = id
 
