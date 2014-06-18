@@ -1,7 +1,8 @@
 module Engine where
 
+import Prelude hiding (lookup)
 import World
-import Data.Map (fromList, (!))
+import Data.Map (Map, fromList, (!), lookup)
 
 adjacent_cell :: Pos -> Dir -> Pos
 adjacent_cell (x, y) East      = (x+1, y)
@@ -14,6 +15,7 @@ adjacent_cell (x, y) NorthEast = if even y then (x, y-1) else (x+1, y-1)
 -- Define left_or_right data type (section 2.1, page 3)
 
 data Left_Or_Right = TurnLeft | TurnRight
+    deriving (Show)
 
 -- Define turn function which takes a direction to turn and
 -- orientation direction and returns a new orientation
@@ -40,6 +42,7 @@ data Sense_Dir =
    | Ahead      -- sense the cell straight ahead in the direction ant is facing
    | LeftAhead  -- sense the cell that would be ahead if ant turned left
    | RightAhead -- sense the cell that would be ahead if ant turned right
+   deriving (Read, Show, Eq)
    
 -- Define sensed_cell function that takes a position, direction
 -- and a direction to sense in and returns the position that will
@@ -59,7 +62,10 @@ kill_ant_at p w = clear_ant_at p w
 -- Define anthill_at function (section 2.3, page 6)
 
 anthill_at :: Pos -> Color -> World -> Bool
-anthill_at = undefined
+anthill_at p c w = case lookup p (hills w) of
+                    Just hillColor -> (c == hillColor)
+                    Nothing -> False
+                    
 
 -- Define condition data type (section 2.6, page 7)
 
@@ -74,7 +80,7 @@ data Condition =
     | FoeMarker         -- cell is marked with *some* marker of the other color
     | Home              -- cell belongs to this ant's anthill
     | FoeHome           -- cell belongs to the other anthill
-    deriving (Eq, Show)
+    deriving (Eq, Read, Show)
 
 -- Define cell_matches function (section 2.6, page 7 and 8)
 
@@ -96,45 +102,63 @@ cell_matches p cond c w =
         Home ->    anthill_at p c w
         FoeHome -> anthill_at p (other_color c) w
 
--- Define State and Instruction data types (section 2.7, page 8)
+-- Define InsState and Instruction data types (section 2.7, page 8)
 
-type State = Integer
+type InsState = Integer
 
-data Instruction = Sense Sense_Dir State State Condition
-                 | Mark Marker State
-                 | Unmark Marker State
-                 | PickUp State State
-                 | Drop State
-                 | Turn Left_Or_Right State
-                 | Move State State
-                 | Flip Integer State State
+data Instruction = Sense Sense_Dir InsState InsState Condition
+                 | Mark Marker InsState
+                 | Unmark Marker InsState
+                 | PickUp InsState InsState
+                 | Drop InsState
+                 | Turn Left_Or_Right InsState
+                 | Move InsState InsState
+                 | Flip Integer InsState InsState
+    deriving (Show)
 
+-- Define a Game type
 
+data Game = Game { gameRound :: Integer
+                 , random :: [Integer]
+                 , instructions :: Map Color (Map InsState Instruction)
+                 , world :: World
+                 }
+                
+mkGame :: Integer -> [(Color, [Instruction])] -> World -> Game
+mkGame seed bs w = Game { gameRound = 0
+                        , random = randomIntStream seed
+                        , instructions = fromList (map f bs)
+                        , world = w
+                        }
+    where
+        f :: (Color, [Instruction]) -> (Color, Map InsState Instruction)
+        f (c, ins) = (c, fromList (zip [0..] ins))
+        
+                 
 -- Define get_instruction function (page 8)
--- TODO = Decide where the instructions are stored
 
-get_instruction :: Color -> State -> World -> Instruction
-get_instruction c s w = instructions ! (c, s) 
-    where instructions = Data.Map.fromList ([] :: [((Color, State), Instruction)])
+get_instruction :: Color -> InsState -> Game -> Instruction
+get_instruction c s g = ins ! c ! s
+    where ins = instructions g
 
 -- Define helper functions that will allow easy translation of the 
--- pseudo code for the step funciton.
--- set_state_pos     - Set the state of the ant at the given position
--- set_has_food_pos  - Set the food carried by the ant at the given position
--- set_direction_pos - Set the direction of the ant at the given position
--- set_resting_pos   - Set the resting count of the ant at the given position
-    
-set_state_pos :: Pos -> State -> World -> World
-set_state_pos p st w = set_ant_at p (set_state (ant_at p w) st) w
+-- pseudo code for the step function.
 
-set_has_food_pos :: Pos -> Bool -> World -> World
-set_has_food_pos p b w = set_ant_at p (set_has_food (ant_at p w) b) w
+-- aa = adjusts an ant and sets a value
+-- aw = adjusts a world
+-- qw = query the world
 
-set_direction_pos :: Pos -> Dir -> World -> World
-set_direction_pos p d w = set_ant_at p (set_direction (ant_at p w) d) w
+aa :: Pos -> (Ant -> v -> Ant) -> v -> Game -> Game
+aa p f v g = g { world = set_ant_at p (f (ant_at p w) v) w }
+        where w = world g
 
-set_resting_pos :: Pos -> Integer -> World -> World
-set_resting_pos p i w = set_ant_at p (set_resting (ant_at p w) i) w
+aw :: (World -> World) -> Game -> Game
+aw f g = g { world = f w }
+        where w = world g
+
+qw :: Game -> (World -> r) -> r
+qw g f = f w
+        where w = world g
 
 -- Define the function step, that takes a world and ant id, returning
 -- a new world with the identified ant moved on one step (page 12)
@@ -146,73 +170,97 @@ set_resting_pos p i w = set_ant_at p (set_resting (ant_at p w) i) w
 (>>>) :: (a -> b) -> (b -> c) -> (a -> c)
 f >>> g = g . f
 
-step :: Integer -> World -> World
-step id w =
-    if (ant_is_alive id w) then
+step :: Game -> Integer -> Game
+step g id =
+    if qw g (ant_is_alive id)  then
         let
+            w = world g
             p = find_ant id w
             a = ant_at p w
         in
             if resting a > 0
-            then set_ant_at p (set_resting a ((resting a) - 1)) w
-            else case get_instruction (color a) (state a) w of
+            then aa p set_resting ((resting a) - 1) $ g
+            else case get_instruction (color a) (state a) g of
                 Sense sensedir st1 st2 cond ->
                     let p' = sensed_cell p (direction a) sensedir
                         st = if cell_matches p' cond (color a) w then st1 else st2
-                    in  set_state_pos p st $ w
+                    in  aa p set_state st $ g
                 Mark i st   ->
-                    set_marker_at p (color a) i >>>
-                    set_state_pos p st $ w
+                    aw (set_marker_at p (color a) i) >>>
+                    aa p set_state st $ g
                 Unmark i st ->
-                    clear_marker_at p (color a) i >>>
-                    set_state_pos p st $ w
+                    aw (clear_marker_at p (color a) i) >>>
+                    aa p set_state st $ g
                 PickUp st1 st2 ->
                     if has_food a || food_at p w == 0 then
-                        set_state_pos p st2 $ w
+                        aa p set_state st2 $ g
                     else
-                        set_food_at p ((food_at p w) - 1) >>>
-                        set_has_food_pos p True  >>>
-                        set_state_pos p st1 $ w
+                        aw (set_food_at p ((food_at p w) - 1)) >>>
+                        aa p set_has_food True  >>>
+                        aa p set_state st1 $ g
                 Drop st ->
                     if has_food a then
-                        set_food_at p ((food_at p w) + 1) >>>
-                        set_has_food_pos p False >>>
-                        set_state_pos p st $ w  -- TODO try and lift this out
+                        aw (set_food_at p ((food_at p w) + 1)) >>>
+                        aa p set_has_food False >>>
+                        aa p set_state st $ g  -- TODO try and lift this out
                     else
-                        set_state_pos p st $ w
+                        aa p set_state st $ g  -- TODO try and lift this out
                 Turn lr st ->
-                    set_direction_pos p (turn lr (direction a)) >>> 
-                    set_state_pos p st $ w
+                    aa p set_direction (turn lr (direction a)) >>> 
+                    aa p set_state st $ g
                 Move st1 st2 ->
                     let newp = adjacent_cell p (direction a) in
-                        if rocky newp w || some_ant_is_at newp w then
-                            set_state_pos p st2 w
+                        if qw g (rocky newp) || qw g (some_ant_is_at newp) then
+                            aa p set_state st2 g
                         else 
-                            clear_ant_at p >>>
-                            set_ant_at newp a >>>
-                            set_state_pos p st1 >>>
-                            set_resting_pos p 14 >>>
-                            check_for_surrounded_ants newp $ w
+                            aw (clear_ant_at p) >>>
+                            aw (set_ant_at newp a) >>>
+                            aa newp set_state st1 >>>
+                            aa newp set_resting 14 >>>
+                            check_for_surrounded_ants newp $ g
                 Flip n st1 st2 ->
-                    let st = if randomint(n) == 0 then st1 else st2 in
-                    set_state_pos p st $ w
+                    let (r, g2) = randomint n g
+                        st = if r == 0 then st1 else st2 in
+                    aa p set_state st $ g2
     else
-        -- Ant is dead don't do anthing
-        w
+        -- Ant is dead don't do anything
+        g
     
 -- Define adjacent_ants, check_for_surrounded_ant_at and
 -- check_for_surrounded_ants (page 10)
 
-adjacent_ants :: Pos -> Color -> World -> Integer
-adjacent_ants = undefined
+adjacent_ants :: Pos -> Color -> Game -> Integer
+adjacent_ants p c g = sum [ 1::Integer | p' <- positions
+                                 , some_ant_is_at p' w
+                                 , let a = ant_at p' w
+                                 , color a == c ]
+  where positions = map (adjacent_cell p) [East .. NorthEast]
+        w = world g
 
-check_for_surrounded_ant_at :: Pos -> World -> World
-check_for_surrounded_ant_at = undefined
+check_for_surrounded_ant_at :: Pos -> Game -> Game
+check_for_surrounded_ant_at p g
+  | killAnt = aw (kill_ant_at p) >>>
+              aw (set_food_at p f) $ g
+  | otherwise = g
+  where w = world g
+        killAnt = some_ant_is_at p w && (adjacent_ants p c g) >= 5
+        c = other_color (color ant)
+        f = 3 + food_at p w + (if has_food ant then 1 else 0)
+        ant = ant_at p w
 
-check_for_surrounded_ants :: Pos -> World -> World
-check_for_surrounded_ants = undefined
+check_for_surrounded_ants :: Pos -> Game -> Game
+check_for_surrounded_ants p g = foldr check_for_surrounded_ant_at g positions
+  where positions = p : map (adjacent_cell p) [East .. NorthEast]
 
 -- Define randomint (page 11)
 
-randomint :: Integer -> Integer
-randomint = undefined
+randomint :: Integer -> Game -> (Integer, Game)
+randomint i g = (r, g')
+    where rs = random g
+          r = (head rs) `mod` i
+          g' = g { random = tail rs }
+
+randomIntStream :: Integer -> [Integer]
+randomIntStream = drop 4
+          . map ((`mod` 16384) . (`div` 65536))
+          . iterate ((`mod` (65536*16384)) . (1 +) . (22695477 *))
