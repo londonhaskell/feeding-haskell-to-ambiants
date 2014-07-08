@@ -12,11 +12,6 @@ adjacent_cell (x, y) West      = (x-1, y)
 adjacent_cell (x, y) NorthWest = if even y then (x-1, y-1) else (x, y-1)
 adjacent_cell (x, y) NorthEast = if even y then (x, y-1) else (x+1, y-1)
 
--- Define left_or_right data type (section 2.1, page 3)
-
-data Left_Or_Right = TurnLeft | TurnRight
-    deriving (Show)
-
 -- Define turn function which takes a direction to turn and
 -- orientation direction and returns a new orientation
 -- (section 2.1, page 4)
@@ -35,15 +30,6 @@ turn TurnRight West      = NorthWest
 turn TurnRight NorthWest = NorthEast
 turn TurnRight NorthEast = East
 
--- Define sense_dir data type (section 2.1, page 4)
-
-data Sense_Dir =
-     Here       -- sense the ant’s current cell
-   | Ahead      -- sense the cell straight ahead in the direction ant is facing
-   | LeftAhead  -- sense the cell that would be ahead if ant turned left
-   | RightAhead -- sense the cell that would be ahead if ant turned right
-   deriving (Read, Show, Eq)
-   
 -- Define sensed_cell function that takes a position, direction
 -- and a direction to sense in and returns the position that will
 -- be sensed (section 2.1, page 4) 
@@ -67,21 +53,6 @@ anthill_at p c w = case lookup p (hills w) of
                     Nothing -> False
                     
 
--- Define condition data type (section 2.6, page 7)
-
-data Condition =
-      Friend            -- cell contains an ant of the same color
-    | Foe               -- cell contains an ant of the other color
-    | FriendWithFood    -- cell contains an ant of the same color carrying food
-    | FoeWithFood       -- cell contains an ant of the other color carrying food
-    | Food              -- cell contains food (not being carried by an ant)
-    | Rock              -- cell is rocky
-    | Marker Marker     -- cell is marked with a marker of this ant's color
-    | FoeMarker         -- cell is marked with *some* marker of the other color
-    | Home              -- cell belongs to this ant's anthill
-    | FoeHome           -- cell belongs to the other anthill
-    deriving (Eq, Read, Show)
-
 -- Define cell_matches function (section 2.6, page 7 and 8)
 
 cell_matches :: Pos -> Condition -> Color -> World -> Bool
@@ -102,19 +73,6 @@ cell_matches p cond c w =
         Home ->    anthill_at p c w
         FoeHome -> anthill_at p (other_color c) w
 
--- Define InsState and Instruction data types (section 2.7, page 8)
-
-type InsState = Integer
-
-data Instruction = Sense Sense_Dir InsState InsState Condition
-                 | Mark Marker InsState
-                 | Unmark Marker InsState
-                 | PickUp InsState InsState
-                 | Drop InsState
-                 | Turn Left_Or_Right InsState
-                 | Move InsState InsState
-                 | Flip Integer InsState InsState
-    deriving (Show)
 
 -- Define a Game type
 

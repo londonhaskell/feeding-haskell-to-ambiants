@@ -14,6 +14,11 @@ data Dir = East | SouthEast | SouthWest
          | West | NorthWest | NorthEast
     deriving (Eq, Enum, Ord, Show, Read)
 
+-- Define left_or_right data type (section 2.1, page 3)
+
+data Left_Or_Right = TurnLeft | TurnRight
+    deriving (Show)
+    
 -- Create the Color data type and other_color function (line 2 and 4 of
 -- Section 2.2, p4)
 
@@ -200,6 +205,10 @@ set_food_at p i w = adjustCellContents f p w
 data Marker = M0 | M1 | M2 | M3 | M4 | M5
     deriving (Read, Show, Eq, Ord, Bounded, Enum)
 
+mkMarker :: Integer -> Marker
+mkMarker n | 0 <= n && n <= 5 = [M0, M1, M2, M3, M4, M4, M5 ] !! (fromInteger n)
+           | otherwise        = error ("markMarker outside bounds: " ++ (show n))
+
 -- The markers for both colours will be stored together
 type Markers = Map (Color, Marker) Bool
     
@@ -229,6 +238,44 @@ check_any_marker_at p c w = not . Prelude.null
                                 . filter (\((c', _), _) -> c' == c)  -- filter by colour
                                 . filter ( snd )  -- only the markers that are set
                                 . toList . markers $ getCellContents p w
+
+-- Define sense_dir data type (section 2.1, page 4)
+
+data Sense_Dir =
+     Here       -- sense the ant’s current cell
+   | Ahead      -- sense the cell straight ahead in the direction ant is facing
+   | LeftAhead  -- sense the cell that would be ahead if ant turned left
+   | RightAhead -- sense the cell that would be ahead if ant turned right
+   deriving (Read, Show, Eq)
+   
+-- Define condition data type (section 2.6, page 7)
+
+data Condition =
+      Friend            -- cell contains an ant of the same color
+    | Foe               -- cell contains an ant of the other color
+    | FriendWithFood    -- cell contains an ant of the same color carrying food
+    | FoeWithFood       -- cell contains an ant of the other color carrying food
+    | Food              -- cell contains food (not being carried by an ant)
+    | Rock              -- cell is rocky
+    | Marker Marker     -- cell is marked with a marker of this ant's color
+    | FoeMarker         -- cell is marked with *some* marker of the other color
+    | Home              -- cell belongs to this ant's anthill
+    | FoeHome           -- cell belongs to the other anthill
+    deriving (Eq, Read, Show)
+
+-- Define InsState and Instruction data types (section 2.7, page 8)
+
+type InsState = Integer
+
+data Instruction = Sense Sense_Dir InsState InsState Condition
+                 | Mark Marker InsState
+                 | Unmark Marker InsState
+                 | PickUp InsState InsState
+                 | Drop InsState
+                 | Turn Left_Or_Right InsState
+                 | Move InsState InsState
+                 | Flip Integer InsState InsState
+    deriving (Show)
 
 -- Define parser from String to World (section 2.4, p6)
 
