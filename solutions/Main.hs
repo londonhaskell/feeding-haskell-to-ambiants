@@ -18,7 +18,7 @@ runTrace (lowerLimit, upperLimit) = do
     putStrLn ("Trace from " ++ show lowerLimit ++ " to " ++ show upperLimit)
     let seed = 12345
     g <- createGame seed
-    let dumpFilePath = ("test\\dump." ++ show lowerLimit ++ "-" ++ show upperLimit)
+    let dumpFilePath = ("test/dump." ++ show lowerLimit ++ "-" ++ show upperLimit)
     h <- openFile dumpFilePath WriteMode
     hSetNewlineMode h noNewlineTranslation
     hPutStr h ("random seed: " ++ show seed ++ "\n")
@@ -28,8 +28,8 @@ runTrace (lowerLimit, upperLimit) = do
 
 createGame :: Integer -> IO Game
 createGame seed = do
-    s  <- readFile "test\\sample-world.txt"
-    i <- readFile "test\\sample.txt"
+    s  <- readFile "test/sample-world.txt"
+    i <- readFile "test/sample.txt"
     let b = parseBrain $ lines i
         w  = parseWorld s
         g = mkGame seed [ (Red, b), (Black, b) ] w
